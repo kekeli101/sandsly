@@ -1,15 +1,21 @@
-// Style reminder: cart feedback should feel immediate, tactile, and visually consistent with the orange action color.
+// Style reminder: use optimistic-feeling server-backed cart feedback while retaining the reference's compact orange actions.
 
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import type { MenuItem } from "@/lib/menu-data";
-
-type CartLine = MenuItem & { quantity: number };
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { toast } from "sonner";
+import { startLogin } from "@/const";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
+import type { CartLine, CatalogProduct } from "@/lib/catalog-types";
 
 type CartContextValue = {
   lines: CartLine[];
   itemCount: number;
-  subtotal: number;
-  addItem: (item: MenuItem) => void;
+  subtotalPesewas: number;
+  deliveryFeePesewas: number;
+  totalPesewas: number;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  addItem: (item: CatalogProduct) => void;
   updateQuantity: (id: string, delta: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
@@ -18,36 +24,49 @@ type CartContextValue = {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [lines, setLines] = useState<CartLine[]>([]);
+  const { isAuthenticated } = useAuth();
+  const utils = trpc.useUtils();
+  const cartQuery = trpc.storefront.cart.useQuery(undefined, { enabled: isAuthenticated, retry: false });
+  const refreshCart = () => utils.storefront.cart.invalidate();
+  const addMutation = trpc.storefront.addToCart.useMutation({ onSuccess: refreshCart });
+  const setQuantityMutation = trpc.storefront.setCartItemQuantity.useMutation({ onSuccess: refreshCart });
+  const clearMutation = trpc.storefront.clearCart.useMutation({ onSuccess: refreshCart });
 
   const value = useMemo<CartContextValue>(() => {
-    const addItem = (item: MenuItem) => {
-      setLines((current) => {
-        const existing = current.find((line) => line.id === item.id);
-        if (existing) {
-          return current.map((line) =>
-            line.id === item.id ? { ...line, quantity: line.quantity + 1 } : line,
-          );
-        }
-        return [...current, { ...item, quantity: 1 }];
+    const lines = (cartQuery.data?.items ?? []) as CartLine[];
+    const addItem = (item: CatalogProduct) => {
+      if (!isAuthenticated) {
+        toast.info(import.meta.env.DEV ? "Open Profile and sign in with the demo account to save your bag." : "Sign in to save your bag and place an order.");
+        if (import.meta.env.DEV) window.location.assign("/profile");
+        else startLogin();
+        return;
+      }
+      addMutation.mutate({ productId: item.id, quantity: 1 }, {
+        onSuccess: () => toast.success(`${item.name} added`, { description: "Saved to your bag." }),
+        onError: (error) => toast.error("Couldn’t add that item", { description: error.message }),
       });
     };
-
     const updateQuantity = (id: string, delta: number) => {
-      setLines((current) =>
-        current
-          .map((line) => (line.id === id ? { ...line, quantity: line.quantity + delta } : line))
-          .filter((line) => line.quantity > 0),
-      );
+      const line = lines.find((item) => item.id === id);
+      if (!line) return;
+      setQuantityMutation.mutate({ productId: id, quantity: Math.max(0, line.quantity + delta) });
     };
-
-    const removeItem = (id: string) => setLines((current) => current.filter((line) => line.id !== id));
-    const clearCart = () => setLines([]);
-    const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);
-    const subtotal = lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
-
-    return { lines, itemCount, subtotal, addItem, updateQuantity, removeItem, clearCart };
-  }, [lines]);
+    const removeItem = (id: string) => setQuantityMutation.mutate({ productId: id, quantity: 0 });
+    const clearCart = () => clearMutation.mutate();
+    return {
+      lines,
+      itemCount: lines.reduce((sum, line) => sum + line.quantity, 0),
+      subtotalPesewas: cartQuery.data?.subtotalPesewas ?? 0,
+      deliveryFeePesewas: cartQuery.data?.deliveryFeePesewas ?? 0,
+      totalPesewas: cartQuery.data?.totalPesewas ?? 0,
+      isLoading: cartQuery.isLoading,
+      isAuthenticated,
+      addItem,
+      updateQuantity,
+      removeItem,
+      clearCart,
+    };
+  }, [addMutation, cartQuery.data, cartQuery.isLoading, clearMutation, isAuthenticated, setQuantityMutation]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

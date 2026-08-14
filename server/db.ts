@@ -1,0 +1,186 @@
+import { and, desc, eq, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/mysql2";
+import {
+  cartItems,
+  carts,
+  categories,
+  customerProfiles,
+  type InsertUser,
+  orderItems,
+  orders,
+  products,
+  users,
+} from "../drizzle/schema";
+import { ENV } from "./_core/env";
+import { calculateOrderTotals } from "./storefront-utils";
+
+const DELIVERY_FEE_PESEWAS = 2000;
+let _db: ReturnType<typeof drizzle> | null = null;
+
+export async function getDb() {
+  if (!_db && process.env.DATABASE_URL) {
+    try {
+      _db = drizzle(process.env.DATABASE_URL);
+    } catch (error) {
+      console.warn("[Database] Failed to connect:", error);
+      _db = null;
+    }
+  }
+  return _db;
+}
+
+async function requireDb() {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  return db;
+}
+
+export async function upsertUser(user: InsertUser): Promise<void> {
+  if (!user.openId) throw new Error("User openId is required for upsert");
+  const db = await requireDb();
+  const values: InsertUser = { openId: user.openId, lastSignedIn: new Date() };
+  const updateSet: Record<string, unknown> = { lastSignedIn: new Date() };
+  for (const field of ["name", "email", "loginMethod"] as const) {
+    if (user[field] !== undefined) {
+      values[field] = user[field] ?? null;
+      updateSet[field] = user[field] ?? null;
+    }
+  }
+  if (user.role !== undefined) {
+    values.role = user.role;
+    updateSet.role = user.role;
+  } else if (user.openId === ENV.ownerOpenId) {
+    values.role = "admin";
+    updateSet.role = "admin";
+  }
+  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+}
+
+export async function getUserByOpenId(openId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  return result[0];
+}
+
+export async function getDevelopmentDemoUser() {
+  if (process.env.NODE_ENV === "production") throw new Error("Demo authentication is disabled in production");
+  const openId = "development-demo-customer";
+  await upsertUser({ openId, name: "Crunch Bite Demo", email: "demo@crunchbite.local", loginMethod: "development-demo", role: "user" });
+  const user = await getUserByOpenId(openId);
+  if (!user) throw new Error("Unable to create the development demo account");
+  return user;
+}
+
+export async function listCatalog() {
+  const db = await requireDb();
+  const [categoryRows, productRows] = await Promise.all([
+    db.select({ id: categories.id, slug: categories.slug, name: categories.name, sortOrder: categories.sortOrder })
+      .from(categories).where(eq(categories.isActive, true)).orderBy(categories.sortOrder),
+    db.select({
+      id: products.id, name: products.name, description: products.description, pricePesewas: products.pricePesewas,
+      imageUrl: products.imageUrl, badge: products.badge, crunchLevel: products.crunchLevel,
+      categorySlug: categories.slug, categoryName: categories.name, sortOrder: products.sortOrder,
+    }).from(products).innerJoin(categories, eq(products.categoryId, categories.id))
+      .where(and(eq(products.isActive, true), eq(categories.isActive, true)))
+      .orderBy(categories.sortOrder, products.sortOrder),
+  ]);
+  return { categories: categoryRows, products: productRows };
+}
+
+async function getOrCreateCart(userId: number) {
+  const db = await requireDb();
+  let cart = (await db.select().from(carts).where(eq(carts.userId, userId)).limit(1))[0];
+  if (!cart) {
+    await db.insert(carts).values({ userId });
+    cart = (await db.select().from(carts).where(eq(carts.userId, userId)).limit(1))[0];
+  }
+  if (!cart) throw new Error("Unable to create cart");
+  return cart;
+}
+
+export async function getCartForUser(userId: number) {
+  const db = await requireDb();
+  const cart = await getOrCreateCart(userId);
+  const rows = await db.select({
+    id: products.id, name: products.name, description: products.description, pricePesewas: products.pricePesewas,
+    imageUrl: products.imageUrl, badge: products.badge, crunchLevel: products.crunchLevel, quantity: cartItems.quantity,
+  }).from(cartItems).innerJoin(products, eq(cartItems.productId, products.id)).where(eq(cartItems.cartId, cart.id));
+  const totals = calculateOrderTotals(rows.map((row) => ({ unitPricePesewas: row.pricePesewas, quantity: row.quantity })), DELIVERY_FEE_PESEWAS);
+  return { items: rows, ...totals };
+}
+
+export async function addCartItem(userId: number, productId: string, quantity: number) {
+  const db = await requireDb();
+  const product = (await db.select({ id: products.id }).from(products).where(and(eq(products.id, productId), eq(products.isActive, true))).limit(1))[0];
+  if (!product) throw new Error("This menu item is unavailable");
+  const cart = await getOrCreateCart(userId);
+  await db.insert(cartItems).values({ cartId: cart.id, productId, quantity }).onDuplicateKeyUpdate({
+    set: { quantity: sql`${cartItems.quantity} + ${quantity}` },
+  });
+  return getCartForUser(userId);
+}
+
+export async function setCartItemQuantity(userId: number, productId: string, quantity: number) {
+  const db = await requireDb();
+  const cart = await getOrCreateCart(userId);
+  if (quantity <= 0) {
+    await db.delete(cartItems).where(and(eq(cartItems.cartId, cart.id), eq(cartItems.productId, productId)));
+  } else {
+    await db.update(cartItems).set({ quantity }).where(and(eq(cartItems.cartId, cart.id), eq(cartItems.productId, productId)));
+  }
+  return getCartForUser(userId);
+}
+
+export async function clearCartForUser(userId: number) {
+  const db = await requireDb();
+  const cart = await getOrCreateCart(userId);
+  await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
+  return { success: true } as const;
+}
+
+export async function createOrderFromCart(userId: number, customerNote?: string) {
+  const db = await requireDb();
+  const cart = await getOrCreateCart(userId);
+  return db.transaction(async (tx) => {
+    const lines = await tx.select({
+      id: products.id, name: products.name, pricePesewas: products.pricePesewas, quantity: cartItems.quantity,
+    }).from(cartItems).innerJoin(products, eq(cartItems.productId, products.id)).where(eq(cartItems.cartId, cart.id));
+    if (!lines.length) throw new Error("Your bag is empty");
+    const totals = calculateOrderTotals(lines.map((line) => ({ unitPricePesewas: line.pricePesewas, quantity: line.quantity })), DELIVERY_FEE_PESEWAS);
+    const orderNumber = `CB-${Date.now().toString().slice(-8)}-${Math.floor(100 + Math.random() * 900)}`;
+    const [created] = await tx.insert(orders).values({
+      orderNumber, userId, status: "pending", currency: "GHS", ...totals, customerNote: customerNote || null,
+    }).$returningId();
+    await tx.insert(orderItems).values(lines.map((line) => ({
+      orderId: created.id, productId: line.id, productName: line.name, unitPricePesewas: line.pricePesewas,
+      quantity: line.quantity, lineTotalPesewas: line.pricePesewas * line.quantity,
+    })));
+    await tx.delete(cartItems).where(eq(cartItems.cartId, cart.id));
+    return { orderNumber, status: "pending" as const, ...totals };
+  });
+}
+
+export async function listOrdersForUser(userId: number) {
+  const db = await requireDb();
+  return db.select({ id: orders.id, orderNumber: orders.orderNumber, status: orders.status, totalPesewas: orders.totalPesewas, createdAt: orders.createdAt })
+    .from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+}
+
+export async function getCustomerProfile(userId: number) {
+  const db = await requireDb();
+  return (await db.select().from(customerProfiles).where(eq(customerProfiles.userId, userId)).limit(1))[0] ?? null;
+}
+
+export async function saveCustomerProfile(userId: number, phone?: string, defaultAddress?: string) {
+  const db = await requireDb();
+  await db.insert(customerProfiles).values({ userId, phone: phone || null, defaultAddress: defaultAddress || null })
+    .onDuplicateKeyUpdate({ set: { phone: phone || null, defaultAddress: defaultAddress || null } });
+  return getCustomerProfile(userId);
+}
+
+export async function listRecentOrdersForAdmin() {
+  const db = await requireDb();
+  return db.select({ id: orders.id, orderNumber: orders.orderNumber, status: orders.status, totalPesewas: orders.totalPesewas, createdAt: orders.createdAt, customerName: users.name })
+    .from(orders).innerJoin(users, eq(orders.userId, users.id)).orderBy(desc(orders.createdAt)).limit(50);
+}
