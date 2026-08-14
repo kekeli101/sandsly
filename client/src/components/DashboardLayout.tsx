@@ -1,270 +1,32 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, type LucideIcon } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { LayoutDashboard, LogOut, Menu, type LucideIcon } from "lucide-react";
+import { CSSProperties } from "react";
 import { useLocation } from "wouter";
-import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
+import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 
-const defaultMenuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-];
+const defaultMenuItems = [{ icon: LayoutDashboard, label: "Dashboard", path: "/" }];
 export type DashboardNavItem = { icon: LucideIcon; label: string; path: string };
 
-const SIDEBAR_WIDTH_KEY = "sidebar-width";
-const DEFAULT_WIDTH = 280;
-const MIN_WIDTH = 200;
-const MAX_WIDTH = 480;
-
-export default function DashboardLayout({
-  children,
-  menuItems = defaultMenuItems,
-  title = "Navigation",
-}: {
-  children: React.ReactNode;
-  menuItems?: DashboardNavItem[];
-  title?: string;
-}) {
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
-    return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
-  });
+export default function DashboardLayout({ children, menuItems = defaultMenuItems, title = "Staff workspace" }: { children: React.ReactNode; menuItems?: DashboardNavItem[]; title?: string }) {
   const { loading, user } = useAuth();
-
-  useEffect(() => {
-    localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
-  }, [sidebarWidth]);
-
-  if (loading) {
-    return <DashboardLayoutSkeleton />
-  }
-
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
-          <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Sign in to continue
-            </h1>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
-            </p>
-          </div>
-          <Button
-            onClick={() => startLogin()}
-            size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
-          >
-            Sign in
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": `${sidebarWidth}px`,
-        } as CSSProperties
-      }
-    >
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth} menuItems={menuItems} title={title}>
-        {children}
-      </DashboardLayoutContent>
-    </SidebarProvider>
-  );
+  if (loading) return <DashboardLayoutSkeleton />;
+  if (!user) return <div className="flex min-h-screen items-center justify-center bg-[#111] text-[#fff7f2]"><div className="max-w-md p-8 text-center"><h1 className="font-display text-3xl font-black uppercase">Staff sign-in required</h1><p className="mt-3 text-sm text-[#bdb2ac]">Sign in to access this staff workspace.</p><Button onClick={() => startLogin()} className="mt-6 bg-[#ff5a1f] text-[#17100d]">Sign in</Button></div></div>;
+  return <SidebarProvider style={{ "--sidebar-width": "250px" } as CSSProperties}><DashboardLayoutContent menuItems={menuItems} title={title}>{children}</DashboardLayoutContent></SidebarProvider>;
 }
 
-type DashboardLayoutContentProps = {
-  children: React.ReactNode;
-  setSidebarWidth: (width: number) => void;
-  menuItems: DashboardNavItem[];
-  title: string;
-};
-
-function DashboardLayoutContent({
-  children,
-  setSidebarWidth,
-  menuItems,
-  title,
-}: DashboardLayoutContentProps) {
+function DashboardLayoutContent({ children, menuItems, title }: { children: React.ReactNode; menuItems: DashboardNavItem[]; title: string }) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
-  const { state, toggleSidebar } = useSidebar();
-  const isCollapsed = state === "collapsed";
-  const [isResizing, setIsResizing] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
-
-  useEffect(() => {
-    if (isCollapsed) {
-      setIsResizing(false);
-    }
-  }, [isCollapsed]);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-
-      const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
-      const newWidth = e.clientX - sidebarLeft;
-      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
-        setSidebarWidth(newWidth);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    if (isResizing) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-  }, [isResizing, setSidebarWidth]);
-
-  return (
-    <>
-      <div className="relative" ref={sidebarRef}>
-        <Sidebar
-          collapsible="icon"
-          className="border-r-0"
-          disableTransition={isResizing}
-        >
-          <SidebarHeader className="h-16 justify-center">
-            <div className="flex items-center gap-3 px-2 transition-all w-full">
-              <button
-                onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
-                aria-label="Toggle navigation"
-              >
-                <PanelLeft className="h-4 w-4 text-muted-foreground" />
-              </button>
-              {!isCollapsed ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
-                    {title}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-          </SidebarHeader>
-
-          <SidebarContent className="gap-0">
-            <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
-                const isActive = location === item.path;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
-                    >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
-                  <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarContent>
-
-          <SidebarFooter className="p-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Avatar className="h-9 w-9 border shrink-0">
-                    <AvatarFallback className="text-xs font-medium">
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-medium truncate leading-none">
-                      {user?.name || "-"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5">
-                      {user?.email || "-"}
-                    </p>
-                  </div>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={logout}
-                  className="cursor-pointer text-destructive focus:text-destructive"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarFooter>
-        </Sidebar>
-        <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors ${isCollapsed ? "hidden" : ""}`}
-          onMouseDown={() => {
-            if (isCollapsed) return;
-            setIsResizing(true);
-          }}
-          style={{ zIndex: 50 }}
-        />
-      </div>
-
-      <SidebarInset>
-        {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="tracking-tight text-foreground">
-                    {activeMenuItem?.label ?? title}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        <main className="flex-1 p-4">{children}</main>
-      </SidebarInset>
-    </>
-  );
+  const activeMenuItem = menuItems.find((item) => item.path === location);
+  const navigate = (path: string) => setLocation(path);
+  const menuTrigger = <DropdownMenuTrigger asChild><button type="button" aria-label="Open kitchen navigation" className="flex h-10 items-center gap-2 rounded-[9px] border border-[#4a403c] bg-[#191817] px-3 text-[#fff7f2] transition-colors hover:border-[#ff5a1f] hover:text-[#ff5a1f]"><Menu size={18} /><span className="text-[10px] font-black uppercase tracking-[0.14em]">Menu</span></button></DropdownMenuTrigger>;
+  const menuContent = <DropdownMenuContent align="start" side="bottom" className="w-60 border-[#4a403c] bg-[#242424] text-[#fff7f2]"><DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.15em] text-[#ff5a1f]">Kitchen navigation</DropdownMenuLabel><DropdownMenuSeparator className="bg-[#4a403c]" />{menuItems.map((item) => <DropdownMenuItem key={item.path} onClick={() => navigate(item.path)} className="cursor-pointer gap-2 text-[#fff7f2] focus:bg-[#3a302c] focus:text-[#fff7f2]"><item.icon size={16} /><span>{item.label}</span></DropdownMenuItem>)}</DropdownMenuContent>;
+  return <><Sidebar collapsible="icon" className="border-r border-[#302b29] bg-[#111] text-[#fff7f2]"><SidebarHeader className="h-auto border-b border-[#302b29] px-3 py-4"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#ff5a1f] text-[#17100d]"><LayoutDashboard size={17} /></span><div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#ff5a1f]">Staff only</p><p className="font-display text-base font-black uppercase tracking-[-0.04em]">{title}</p></div></div><div className="mt-4 group-data-[collapsible=icon]:hidden"><DropdownMenu>{menuTrigger}{menuContent}</DropdownMenu></div></SidebarHeader><SidebarContent className="bg-[#111] px-2 py-3"><SidebarMenu>{menuItems.map((item) => <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={location === item.path} onClick={() => navigate(item.path)} tooltip={item.label} className="h-11 text-[#cfc2bb] hover:bg-[#2b2522] hover:text-[#fff7f2] data-[active=true]:bg-[#ff5a1f] data-[active=true]:text-[#17100d]"><item.icon size={17} /><span className="font-black uppercase tracking-[0.11em]">{item.label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarContent><SidebarFooter className="border-t border-[#302b29] bg-[#111] p-3"><DropdownMenu><DropdownMenuTrigger asChild><button className="flex w-full items-center gap-3 rounded-[9px] p-2 text-left transition-colors hover:bg-[#2b2522] group-data-[collapsible=icon]:justify-center"><Avatar className="h-8 w-8 border border-[#5a4a42]"><AvatarFallback className="bg-[#2b2522] text-xs text-[#ff5a1f]">{user?.name?.charAt(0).toUpperCase()}</AvatarFallback></Avatar><div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-xs font-bold text-[#fff7f2]">{user?.name || "Kitchen staff"}</p><p className="mt-0.5 text-[10px] uppercase tracking-[0.1em] text-[#a89d96]">{user?.role}</p></div></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-48 border-[#4a403c] bg-[#242424]"><DropdownMenuItem onClick={logout} className="cursor-pointer text-red-300 focus:bg-red-500/15 focus:text-red-200"><LogOut className="mr-2 h-4 w-4" />Sign out</DropdownMenuItem></DropdownMenuContent></DropdownMenu></SidebarFooter></Sidebar><SidebarInset className="bg-[#111]"><header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-[#302b29] bg-[#111]/95 px-4 backdrop-blur"><DropdownMenu>{menuTrigger}{menuContent}</DropdownMenu><div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-[0.15em] text-[#ff5a1f]">Kitchen staff workspace</p><p className="truncate font-display text-lg font-black uppercase tracking-[-0.04em] text-[#fff7f2]">{activeMenuItem?.label ?? title}</p></div>{isMobile ? null : <span className="ml-auto rounded-full border border-[#ff5a1f]/35 bg-[#ff5a1f]/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.13em] text-[#ff8a61]">Live kitchen</span>}</header><main className="flex-1">{children}</main></SidebarInset></>;
 }

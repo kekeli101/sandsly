@@ -15,3 +15,8 @@
 - [x] Make the Kitchen Board discoverable from an appropriate staff-facing entry point.
 - [x] Verify the Kitchen Board route and access guidance after the visibility fix.
 - [x] Verify the non-kitchen Profile guidance and access-restricted Kitchen Board state.
+- [x] Fix the non-responsive upper-left kitchen navigation control.
+- [x] Make the kitchen workspace identity and navigation unmistakable for staff.
+- [x] Verify the repaired control and kitchen visual hierarchy on desktop and mobile.
+- [x] Verify the repaired Kitchen Menu and staff interface on a mobile viewport.
+- [x] Interactively verify the Kitchen Menu and route navigation at a mobile viewport.
