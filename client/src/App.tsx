@@ -17,7 +17,7 @@ function Rewards() { return <Placeholder kind="rewards" />; }
 function Profile() { return <Placeholder kind="profile" />; }
 
 function Router() {
-  return <AppShell><Switch><Route path="/" component={Home} /><Route path="/menu" component={Menu} /><Route path="/cart" component={Cart} /><Route path="/rewards" component={Rewards} /><Route path="/profile" component={Profile} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch></AppShell>;
+  return <AppShell><Switch><Route path="/" component={Home} /><Route path="/menu" component={Menu} /><Route path="/menu/:category" component={Menu} /><Route path="/cart" component={Cart} /><Route path="/rewards" component={Rewards} /><Route path="/profile" component={Profile} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch></AppShell>;
 }
 
 export default function App() {

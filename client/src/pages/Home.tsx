@@ -7,9 +7,11 @@ import { menuItems } from "@/lib/menu-data";
 
 const quickHits = [
   { label: "Boba", category: "boba", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAToXdghCpHEt6Iqomv0rjpXB_iBHWVSReD5ScUnPNZPRo3xV2ftA6AraKr5btDpTAIKLgfGBBHpZGs0dUAZ02eAOmhPYZ-nzERM8QEi7NWGoLl5Db1aKln_PNAmYo8kupJFr4N7o3kcMFAUSZirL3YSBCSZzkITC4N1qBRWTjiIRdhaKTz1Xm5ZRul-lf8TuETwfFI6JCLu0x9Ccu3_u5lymZHjXhYaAmI16vU4EErLYqWCZ3gJny2" },
-  { label: "Pizza", category: "savory", image: "/manus-storage/crunch-bite-hero_ea29a631.jpg" },
-  { label: "Pork", category: "sides", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuD_72Dmatc8j1YIhJh-UIrX3bRp8O7J94Jig4st1SSYVNQXZk09vOgOVnBpz0Jk1QIv3gBw6rJnJv4Voe6iYuG7mNFCFUqKYhL0_7jhy54KS8Ww7sSOEFkDZdIOqJRHyiSAnGEQJuokxbRZN5U1L5AsLoZ-BaxAIVFig85vPGbdoDHz29S3sWSRPPD4WktksuEJJ181RxGTxlaZFlAKxKN5IDBPAbJNqIwGCjMOH5fZ6dxT3EjF7R9d" },
-  { label: "Sides", category: "sides", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDcv1lbSEHD4iEoLB4_tWEbZd6pq8ehPZFuDh9inOsoAnShEq7oxvWuJ0H77-GhQqFSYDTw3ZnzAvbtynI6pe_LNQ4_1AXBmElPkGG6eGwotmwl-IMpo_g0zKBn-n_1mPSNi-p52cAsM0t00VAxhgGMV4poicqiUkaahttD97ibG_wHYNq8QSfysWoNvpiJV1Ze8VlxmS7llAoFjKdL6Lb3HSEb-_qm3kO_BpI0NMrqUWef81GbOaTv" },
+  { label: "Yogurt", category: "yogurt", image: "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=900&q=85" },
+  { label: "Ice cream", category: "ice-cream", image: "https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?auto=format&fit=crop&w=900&q=85" },
+  { label: "Pizza", category: "pizza", image: "/manus-storage/crunch-bite-hero_ea29a631.jpg" },
+  { label: "Fries", category: "fries", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuANuiJDnbEmyRfw8ekdDqH-09TMD3-LeUQhdCF-RFW2aMnz-SJjirSfmLW0FsIfc9QAFDxU8hL83ofsS03ZUrkHIM3GWCcAuMSgUnHI1KX3QSNsm3Pt8uhdd504ZKzjZLnesVPOdkQjLPHwimhXzTsJYW9kDpWd5HFngST_jPWqAnTvmBib7czDA1ARL1WdUoKdhnZ8rCPg74ukvwPiXu62KjR8CslW6Qq8mqW3rNHmQEm1pgRte85i" },
+  { label: "Pork", category: "pork", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuD_72Dmatc8j1YIhJh-UIrX3bRp8O7J94Jig4st1SSYVNQXZk09vOgOVnBpz0Jk1QIv3gBw6rJnJv4Voe6iYuG7mNFCFUqKYhL0_7jhy54KS8Ww7sSOEFkDZdIOqJRHyiSAnGEQJuokxbRZN5U1L5AsLoZ-BaxAIVFig85vPGbdoDHz29S3sWSRPPD4WktksuEJJ181RxGTxlaZFlAKxKN5IDBPAbJNqIwGCjMOH5fZ6dxT3EjF7R9d" },
 ];
 
 export default function Home() {
@@ -36,7 +38,7 @@ export default function Home() {
           <div className="mb-5 flex items-center gap-2"><Zap size={16} className="text-[#ff5a1f]" fill="currentColor" /><h2 className="font-display text-[1.1rem] font-black uppercase tracking-[-0.03em] text-[#fff7f2]">Quick hits</h2></div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {quickHits.map((hit) => (
-              <button key={hit.label} type="button" onClick={() => setLocation(`/menu?category=${hit.category}`)} className="group relative aspect-square overflow-hidden rounded-[13px] border border-[#3b3633] bg-[#292929] text-left shadow-[3px_3px_0_#060606] transition-transform duration-200 hover:-translate-y-1 active:scale-[0.98]">
+              <button key={hit.label} type="button" onClick={() => setLocation(`/menu/${hit.category}`)} className="group relative aspect-square overflow-hidden rounded-[13px] border border-[#3b3633] bg-[#292929] text-left shadow-[3px_3px_0_#060606] transition-transform duration-200 hover:-translate-y-1 active:scale-[0.98]">
                 <img src={hit.image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-65 mix-blend-luminosity transition-opacity duration-200 group-hover:opacity-80" />
                 <span className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/80" />
                 <span className="absolute bottom-3 left-3 font-display text-[0.95rem] font-black uppercase tracking-[-0.03em] text-[#fff7f2]">{hit.label}</span>
