@@ -43,3 +43,13 @@ export const adminProcedure = t.procedure.use(
     });
   }),
 );
+
+export const kitchenProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+    if (!ctx.user || (ctx.user.role !== "admin" && ctx.user.role !== "kitchen")) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Kitchen staff access required (10003)" });
+    }
+    return next({ ctx: { ...ctx, user: ctx.user } });
+  }),
+);

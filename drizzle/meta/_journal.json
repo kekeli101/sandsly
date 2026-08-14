@@ -8,6 +8,13 @@
       "when": 1786710947302,
       "tag": "0000_flawless_hannibal_king",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1786723919407,
+      "tag": "0001_greedy_goblin_queen",
+      "breakpoints": true
     }
   ]
 }

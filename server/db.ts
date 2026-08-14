@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   cartItems,
@@ -9,10 +9,12 @@ import {
   orderItems,
   orders,
   products,
+  type OrderStatus,
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { calculateOrderTotals } from "./storefront-utils";
+import { isValidKitchenTransition } from "./kitchen-utils";
 
 const DELIVERY_FEE_PESEWAS = 2000;
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -66,7 +68,7 @@ export async function getUserByOpenId(openId: string) {
 export async function getDevelopmentDemoUser() {
   if (process.env.NODE_ENV === "production") throw new Error("Demo authentication is disabled in production");
   const openId = "development-demo-customer";
-  await upsertUser({ openId, name: "Crunch Bite Demo", email: "demo@crunchbite.local", loginMethod: "development-demo", role: "user" });
+  await upsertUser({ openId, name: "Crunch Bite Kitchen", email: "demo@crunchbite.local", loginMethod: "development-demo", role: "kitchen" });
   const user = await getUserByOpenId(openId);
   if (!user) throw new Error("Unable to create the development demo account");
   return user;
@@ -183,4 +185,25 @@ export async function listRecentOrdersForAdmin() {
   const db = await requireDb();
   return db.select({ id: orders.id, orderNumber: orders.orderNumber, status: orders.status, totalPesewas: orders.totalPesewas, createdAt: orders.createdAt, customerName: users.name })
     .from(orders).innerJoin(users, eq(orders.userId, users.id)).orderBy(desc(orders.createdAt)).limit(50);
+}
+
+export async function listKitchenOrders() {
+  const db = await requireDb();
+  const orderRows = await db.select({
+    id: orders.id, orderNumber: orders.orderNumber, status: orders.status, totalPesewas: orders.totalPesewas,
+    customerName: users.name, customerNote: orders.customerNote, createdAt: orders.createdAt,
+  }).from(orders).innerJoin(users, eq(orders.userId, users.id)).orderBy(desc(orders.createdAt)).limit(80);
+  if (!orderRows.length) return [];
+  const items = await db.select({ orderId: orderItems.orderId, productName: orderItems.productName, quantity: orderItems.quantity })
+    .from(orderItems).where(inArray(orderItems.orderId, orderRows.map((order) => order.id)));
+  return orderRows.map((order) => ({ ...order, items: items.filter((item) => item.orderId === order.id) }));
+}
+
+export async function updateKitchenOrderStatus(orderId: number, nextStatus: OrderStatus) {
+  const db = await requireDb();
+  const order = (await db.select({ id: orders.id, status: orders.status }).from(orders).where(eq(orders.id, orderId)).limit(1))[0];
+  if (!order) throw new Error("Order not found");
+  if (!isValidKitchenTransition(order.status, nextStatus)) throw new Error(`Cannot move an ${order.status} order to ${nextStatus}`);
+  await db.update(orders).set({ status: nextStatus }).where(eq(orders.id, orderId));
+  return { id: orderId, status: nextStatus };
 }

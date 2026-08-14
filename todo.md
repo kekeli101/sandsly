@@ -9,3 +9,6 @@
 - [x] Add a development-only local username/password demo sign-in path.
 - [x] Recognize the demo session in protected backend procedures without changing production OAuth behavior.
 - [x] Verify add-to-cart, checkout, and order history using the demo account.
+- [x] Add a role-protected kitchen dashboard for incoming orders.
+- [x] Add backend order-status updates with valid kitchen workflow transitions.
+- [x] Verify staff order visibility and status changes end to end.

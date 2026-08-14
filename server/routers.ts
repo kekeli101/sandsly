@@ -5,6 +5,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { adminRouter } from "./routers/admin";
 import { catalogRouter } from "./routers/catalog";
 import { demoAuthRouter } from "./routers/demo-auth";
+import { kitchenRouter } from "./routers/kitchen";
 import { storefrontRouter } from "./routers/storefront";
 
 export const appRouter = router({
@@ -18,6 +19,7 @@ export const appRouter = router({
   }),
   catalog: catalogRouter,
   demoAuth: demoAuthRouter,
+  kitchen: kitchenRouter,
   storefront: storefrontRouter,
   admin: adminRouter,
 });
