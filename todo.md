@@ -12,3 +12,6 @@
 - [x] Add a role-protected kitchen dashboard for incoming orders.
 - [x] Add backend order-status updates with valid kitchen workflow transitions.
 - [x] Verify staff order visibility and status changes end to end.
+- [x] Make the Kitchen Board discoverable from an appropriate staff-facing entry point.
+- [x] Verify the Kitchen Board route and access guidance after the visibility fix.
+- [x] Verify the non-kitchen Profile guidance and access-restricted Kitchen Board state.

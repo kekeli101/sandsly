@@ -45,8 +45,9 @@ const trpcClient = trpc.createClient({
       transformer: superjson,
       headers() {
         const headers: Record<string, string> = {};
-        if (import.meta.env.DEV && getDemoSession() === "crunch-demo-customer") {
-          headers["x-crunch-demo-user"] = "crunch-demo-customer";
+        const demoSession = getDemoSession();
+        if (import.meta.env.DEV && demoSession) {
+          headers["x-crunch-demo-user"] = demoSession;
         }
         // Preview auto-login fallback: when the browser blocks iframe cookies
         // (Safari ITP / private browsing / WebView), the runtime mirrors the

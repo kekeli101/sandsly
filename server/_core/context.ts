@@ -1,7 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
-import { getDevelopmentDemoUser } from "../db";
-import { DEMO_AUTH_HEADER, DEMO_SESSION_KEY, demoAuthEnabled } from "../demo-auth";
+import { DEMO_AUTH_HEADER, demoAuthEnabled, getDemoSessionUser } from "../demo-auth";
 import { sdk } from "./sdk";
 
 export type TrpcContext = {
@@ -16,9 +15,10 @@ export async function createContext(
   let user: User | null = null;
 
   const demoHeader = opts.req.header(DEMO_AUTH_HEADER);
-  if (demoAuthEnabled() && demoHeader === DEMO_SESSION_KEY) {
+  const demoUser = demoHeader ? await getDemoSessionUser(demoHeader) : null;
+  if (demoAuthEnabled() && demoUser) {
     // Deliberately development-only: production ignores this browser-controlled header entirely.
-    user = await getDevelopmentDemoUser();
+    user = demoUser;
   } else {
     try {
       user = await sdk.authenticateRequest(opts.req);

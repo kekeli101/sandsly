@@ -74,6 +74,15 @@ export async function getDevelopmentDemoUser() {
   return user;
 }
 
+export async function getDevelopmentDemoCustomer() {
+  if (process.env.NODE_ENV === "production") throw new Error("Demo authentication is disabled in production");
+  const openId = "development-demo-customer-user";
+  await upsertUser({ openId, name: "Crunch Bite Customer", email: "customer-demo@crunchbite.local", loginMethod: "development-demo", role: "user" });
+  const user = await getUserByOpenId(openId);
+  if (!user) throw new Error("Unable to create the development customer account");
+  return user;
+}
+
 export async function listCatalog() {
   const db = await requireDb();
   const [categoryRows, productRows] = await Promise.all([
