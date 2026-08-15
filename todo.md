@@ -20,3 +20,10 @@
 - [x] Verify the repaired control and kitchen visual hierarchy on desktop and mobile.
 - [x] Verify the repaired Kitchen Menu and staff interface on a mobile viewport.
 - [x] Interactively verify the Kitchen Menu and route navigation at a mobile viewport.
+
+- [x] Audit and remove Manus-specific authentication, runtime, analytics, storage, and deployment ties.
+- [x] Replace required services with standalone configuration and document environment variables.
+- [x] Verify local standalone development and customer/kitchen workflows.
+- [x] Document independent deployment and migration requirements.
+- [x] Verify the standalone kitchen/admin workflow end to end after detachment.
+- [x] Verify the standalone admin role can access the Kitchen Board after detachment.

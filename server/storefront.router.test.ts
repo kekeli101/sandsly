@@ -25,7 +25,7 @@ function createCustomerContext(): TrpcContext {
       openId: "customer-open-id",
       name: "Crunch Customer",
       email: "customer@example.com",
-      loginMethod: "manus",
+      loginMethod: "password",
       role: "user",
       createdAt: new Date(),
       updatedAt: new Date(),

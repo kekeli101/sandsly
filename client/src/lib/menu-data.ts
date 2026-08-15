@@ -58,7 +58,7 @@ export const menuItems: MenuItem[] = [
     name: "Spicy Honey Pepperoni",
     description: "Thick crust, charred cups, and our signature hot honey drizzle.",
     price: 140,
-    image: "/manus-storage/crunch-bite-hero_ea29a631.jpg",
+    image: "https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=1400&q=85",
     category: "pizza",
     badge: "Hot",
     crunch: 3,

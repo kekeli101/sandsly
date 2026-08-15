@@ -2,7 +2,6 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider } from "@/components/ui/sidebar";
-import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { LayoutDashboard, LogOut, Menu, type LucideIcon } from "lucide-react";
 import { CSSProperties } from "react";
@@ -16,7 +15,7 @@ export type DashboardNavItem = { icon: LucideIcon; label: string; path: string }
 export default function DashboardLayout({ children, menuItems = defaultMenuItems, title = "Staff workspace" }: { children: React.ReactNode; menuItems?: DashboardNavItem[]; title?: string }) {
   const { loading, user } = useAuth();
   if (loading) return <DashboardLayoutSkeleton />;
-  if (!user) return <div className="flex min-h-screen items-center justify-center bg-[#111] text-[#fff7f2]"><div className="max-w-md p-8 text-center"><h1 className="font-display text-3xl font-black uppercase">Staff sign-in required</h1><p className="mt-3 text-sm text-[#bdb2ac]">Sign in to access this staff workspace.</p><Button onClick={() => startLogin()} className="mt-6 bg-[#ff5a1f] text-[#17100d]">Sign in</Button></div></div>;
+  if (!user) return <div className="flex min-h-screen items-center justify-center bg-[#111] text-[#fff7f2]"><div className="max-w-md p-8 text-center"><h1 className="font-display text-3xl font-black uppercase">Staff sign-in required</h1><p className="mt-3 text-sm text-[#bdb2ac]">Sign in with your Sandsly account to access this staff workspace.</p><Button onClick={() => { window.location.href = "/profile"; }} className="mt-6 bg-[#ff5a1f] text-[#17100d]">Go to sign in</Button></div></div>;
   return <SidebarProvider style={{ "--sidebar-width": "250px" } as CSSProperties}><DashboardLayoutContent menuItems={menuItems} title={title}>{children}</DashboardLayoutContent></SidebarProvider>;
 }
 

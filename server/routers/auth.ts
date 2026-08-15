@@ -1,0 +1,31 @@
+import { randomUUID } from "node:crypto";
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+import { createLocalUser, getUserByEmail, touchUser } from "../db";
+import { clearSessionCookie, createSessionToken, hashPassword, normalizedEmail, publicUser, setSessionCookie, verifyPassword } from "../standalone-auth";
+import { publicProcedure, router } from "../_core/trpc";
+
+const credentials = z.object({ email: z.string().email(), password: z.string().min(8) });
+
+export const standaloneAuthRouter = router({
+  register: publicProcedure.input(credentials.extend({ name: z.string().trim().min(2).max(120) })).mutation(async ({ input, ctx }) => {
+    const email = normalizedEmail(input.email);
+    if (await getUserByEmail(email)) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
+    const passwordHash = await hashPassword(input.password);
+    const user = await createLocalUser({ openId: `local-${randomUUID()}`, name: input.name.trim(), email, passwordHash, loginMethod: "password", role: "user" });
+    if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create account." });
+    setSessionCookie(ctx.res, ctx.req, await createSessionToken(user));
+    return publicUser(user);
+  }),
+  login: publicProcedure.input(credentials).mutation(async ({ input, ctx }) => {
+    const user = await getUserByEmail(normalizedEmail(input.email));
+    if (!user || !(await verifyPassword(input.password, user.passwordHash))) throw new TRPCError({ code: "UNAUTHORIZED", message: "Email or password is incorrect." });
+    await touchUser(user.id);
+    setSessionCookie(ctx.res, ctx.req, await createSessionToken(user));
+    return publicUser(user);
+  }),
+  logout: publicProcedure.mutation(({ ctx }) => {
+    clearSessionCookie(ctx.res, ctx.req);
+    return { success: true } as const;
+  }),
+});

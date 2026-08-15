@@ -12,7 +12,6 @@ import {
   type OrderStatus,
   users,
 } from "../drizzle/schema";
-import { ENV } from "./_core/env";
 import { calculateOrderTotals } from "./storefront-utils";
 import { isValidKitchenTransition } from "./kitchen-utils";
 
@@ -51,9 +50,6 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   if (user.role !== undefined) {
     values.role = user.role;
     updateSet.role = user.role;
-  } else if (user.openId === ENV.ownerOpenId) {
-    values.role = "admin";
-    updateSet.role = "admin";
   }
   await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
 }
@@ -63,6 +59,31 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
+}
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result[0];
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result[0];
+}
+
+export async function createLocalUser(user: InsertUser) {
+  const db = await requireDb();
+  await db.insert(users).values(user);
+  return getUserByOpenId(user.openId);
+}
+
+export async function touchUser(id: number) {
+  const db = await requireDb();
+  await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, id));
 }
 
 export async function getDevelopmentDemoUser() {

@@ -1,0 +1,48 @@
+# Sandsly standalone setup
+
+Sandsly now runs with its own local email/password authentication and signed cookie sessions. The app no longer requires Manus OAuth, Manus Preview headers, Manus storage, Manus analytics, or the managed Vite runtime.
+
+## Required environment variables
+
+```bash
+NODE_ENV=development
+DATABASE_URL=mysql://user:password@127.0.0.1:3306/sandsly
+JWT_SECRET=replace-with-a-long-random-secret
+```
+
+`JWT_SECRET` must be a long, random value in production. The database is MySQL-compatible and the existing Drizzle migrations create the catalog, users, carts, orders, profiles, roles, and password hash column.
+
+## Install and run
+
+```bash
+pnpm install
+pnpm drizzle-kit migrate
+pnpm dev
+```
+
+The production bundle is built with:
+
+```bash
+pnpm check
+pnpm test
+pnpm build
+NODE_ENV=production node dist/index.js
+```
+
+The server listens on the `PORT` environment variable when provided and otherwise uses the local development default.
+
+## Authentication
+
+Customers register and sign in at `/profile` using email and password. Passwords are hashed with `scrypt`, and sessions are signed with `JWT_SECRET` in an HTTP-only cookie. Kitchen and admin access continues to use the existing database roles. Promote a staff account by updating its `role` to `kitchen` or `admin` through an authorized database administration process.
+
+## External assets
+
+The storefront uses public image URLs for menu photography and a repository-owned SVG brand mark at `client/public/brand-mark.svg`. No Manus storage proxy is required.
+
+## Deployment
+
+Deploy the Node server and the built `dist` directory to any host that supports Node.js, Express, and a MySQL-compatible database. Configure the same environment variables in the host’s secret manager, enable HTTPS, and use a persistent database. If the deployment is behind a reverse proxy, forward the `X-Forwarded-Proto` header so secure cookie behavior remains correct.
+
+## Scope intentionally removed
+
+The standalone build does not include Manus OAuth, Preview/demo-session headers, Manus Forge integrations, Manus analytics injection, owner notifications, or the Manus-specific Vite runtime/debug collector.

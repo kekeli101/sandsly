@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { toast } from "sonner";
-import { startLogin } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import type { CartLine, CatalogProduct } from "@/lib/catalog-types";
@@ -36,9 +35,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const lines = (cartQuery.data?.items ?? []) as CartLine[];
     const addItem = (item: CatalogProduct) => {
       if (!isAuthenticated) {
-        toast.info(import.meta.env.DEV ? "Open Profile and sign in with the demo account to save your bag." : "Sign in to save your bag and place an order.");
-        if (import.meta.env.DEV) window.location.assign("/profile");
-        else startLogin();
+        toast.info("Sign in to save your bag and place an order.");
+        window.location.assign("/profile");
         return;
       }
       addMutation.mutate({ productId: item.id, quantity: 1 }, {

@@ -5,7 +5,7 @@ import { Home as HomeIcon, Menu as MenuIcon, QrCode, ShoppingCart, UserRound, Ut
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 
-const markUrl = "/manus-storage/crunch-bite-mark_f58f355a.png";
+const markUrl = "/brand-mark.svg";
 
 const navItems = [
   { label: "Home", href: "/", icon: HomeIcon },

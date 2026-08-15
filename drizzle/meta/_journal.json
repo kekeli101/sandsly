@@ -15,6 +15,13 @@
       "when": 1786723919407,
       "tag": "0001_greedy_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786826498106,
+      "tag": "0002_thankful_sally_floyd",
+      "breakpoints": true
     }
   ]
 }
