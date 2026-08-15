@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import {
   cartItems,
   carts,
@@ -17,13 +18,18 @@ import { isValidKitchenTransition } from "./kitchen-utils";
 
 const DELIVERY_FEE_PESEWAS = 2000;
 let _db: ReturnType<typeof drizzle> | null = null;
+let _client: ReturnType<typeof postgres> | null = null;
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  if (!_db) {
+    const connectionString = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+    if (!connectionString) return null;
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _client = postgres(connectionString, { prepare: false, max: 5 });
+      _db = drizzle(_client);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
+      _client = null;
       _db = null;
     }
   }
@@ -51,7 +57,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     values.role = user.role;
     updateSet.role = user.role;
   }
-  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  await db.insert(users).values(values).onConflictDoUpdate({ target: users.openId, set: updateSet });
 }
 
 export async function getUserByOpenId(openId: string) {
@@ -147,7 +153,8 @@ export async function addCartItem(userId: number, productId: string, quantity: n
   const product = (await db.select({ id: products.id }).from(products).where(and(eq(products.id, productId), eq(products.isActive, true))).limit(1))[0];
   if (!product) throw new Error("This menu item is unavailable");
   const cart = await getOrCreateCart(userId);
-  await db.insert(cartItems).values({ cartId: cart.id, productId, quantity }).onDuplicateKeyUpdate({
+  await db.insert(cartItems).values({ cartId: cart.id, productId, quantity }).onConflictDoUpdate({
+    target: [cartItems.cartId, cartItems.productId],
     set: { quantity: sql`${cartItems.quantity} + ${quantity}` },
   });
   return getCartForUser(userId);
@@ -183,7 +190,7 @@ export async function createOrderFromCart(userId: number, customerNote?: string)
     const orderNumber = `CB-${Date.now().toString().slice(-8)}-${Math.floor(100 + Math.random() * 900)}`;
     const [created] = await tx.insert(orders).values({
       orderNumber, userId, status: "pending", currency: "GHS", ...totals, customerNote: customerNote || null,
-    }).$returningId();
+    }).returning({ id: orders.id });
     await tx.insert(orderItems).values(lines.map((line) => ({
       orderId: created.id, productId: line.id, productName: line.name, unitPricePesewas: line.pricePesewas,
       quantity: line.quantity, lineTotalPesewas: line.pricePesewas * line.quantity,
@@ -207,7 +214,7 @@ export async function getCustomerProfile(userId: number) {
 export async function saveCustomerProfile(userId: number, phone?: string, defaultAddress?: string) {
   const db = await requireDb();
   await db.insert(customerProfiles).values({ userId, phone: phone || null, defaultAddress: defaultAddress || null })
-    .onDuplicateKeyUpdate({ set: { phone: phone || null, defaultAddress: defaultAddress || null } });
+    .onConflictDoUpdate({ target: customerProfiles.userId, set: { phone: phone || null, defaultAddress: defaultAddress || null, updatedAt: new Date() } });
   return getCustomerProfile(userId);
 }
 
@@ -234,6 +241,6 @@ export async function updateKitchenOrderStatus(orderId: number, nextStatus: Orde
   const order = (await db.select({ id: orders.id, status: orders.status }).from(orders).where(eq(orders.id, orderId)).limit(1))[0];
   if (!order) throw new Error("Order not found");
   if (!isValidKitchenTransition(order.status, nextStatus)) throw new Error(`Cannot move an ${order.status} order to ${nextStatus}`);
-  await db.update(orders).set({ status: nextStatus }).where(eq(orders.id, orderId));
+  await db.update(orders).set({ status: nextStatus, updatedAt: new Date() }).where(eq(orders.id, orderId));
   return { id: orderId, status: nextStatus };
 }

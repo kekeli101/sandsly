@@ -39,3 +39,7 @@
 - [x] Hide Kitchen Board navigation and staff tools from normal customer accounts.
 - [x] Keep Kitchen Board visible and accessible for kitchen@mail.com and explicitly assigned Kitchen/Admin roles.
 - [x] Verify customer and Kitchen account visibility and route protection.
+- [x] Port the Drizzle schema and database adapter from MySQL to Supabase Postgres.
+- [x] Add Vercel SPA configuration and Render API deployment configuration.
+- [x] Update production environment and CORS documentation for Vercel, Render, and Supabase.
+- [ ] Verify the external-hosting build, database migration, authentication, ordering, and Kitchen Board flows.

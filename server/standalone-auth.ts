@@ -47,9 +47,10 @@ export async function createSessionToken(user: Pick<User, "id">) {
 
 export function setSessionCookie(res: Response, req: Request, token: string) {
   const secure = req.protocol === "https" || req.get("x-forwarded-proto") === "https";
+  const crossSite = Boolean(process.env.FRONTEND_ORIGIN);
   res.cookie(STANDALONE_SESSION_COOKIE, token, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: crossSite ? "none" : "lax",
     secure,
     path: "/",
     maxAge: SESSION_TTL_MS,
@@ -58,9 +59,10 @@ export function setSessionCookie(res: Response, req: Request, token: string) {
 
 export function clearSessionCookie(res: Response, req: Request) {
   const secure = req.protocol === "https" || req.get("x-forwarded-proto") === "https";
+  const crossSite = Boolean(process.env.FRONTEND_ORIGIN);
   res.clearCookie(STANDALONE_SESSION_COOKIE, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: crossSite ? "none" : "lax",
     secure,
     path: "/",
   });

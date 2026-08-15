@@ -7,10 +7,11 @@ import App from "./App";
 import "./index.css";
 
 const queryClient = new QueryClient();
+const apiBaseUrl = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: `${apiBaseUrl}/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, { ...(init ?? {}), credentials: "include" });
