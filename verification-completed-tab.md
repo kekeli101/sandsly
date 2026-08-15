@@ -7,3 +7,5 @@ Completed order cards displayed no status action buttons, confirming they are re
 The newly provisioned `kitchen@mail.com` account successfully signed in through `/profile` with the supplied password and displayed the Kitchen Staff role plus the Open Kitchen Board action.
 
 The `kitchen@mail.com` session opened `/kitchen` successfully and displayed the Kitchen Staff console, Active/Completed tabs, and the existing completed-order count.
+
+Live verification completed with disposable order `CB-30477649-569`: it progressed Pending → Accepted → Preparing → Ready → Completed. After completion, Active decreased from 1 to 0, Completed increased from 3 to 4, and the order appeared in the Completed tab with a completed badge, no action button, and its item/total details.

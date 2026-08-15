@@ -32,7 +32,7 @@
 - [x] Verify the Completed tab on mobile and desktop.
 - [x] Interactively verify the Completed tab by advancing a ready order to completed and confirming it moves from Active into Completed.
 - [x] Verify the Kitchen Board Completed tab at a desktop viewport as well as mobile.
-- [ ] Interactively verify a ready order can be marked completed and confirm the Active count decreases, the Completed count increases, and the order appears read-only under the Completed tab.
+- [x] Interactively verify a ready order can be marked completed and confirm the Active count decreases, the Completed count increases, and the order appears read-only under the Completed tab.
 - [x] Add a test covering the ready → completed kitchen transition and completed-status persistence.
 - [x] Resolve the reported Kitchen account email/password mismatch and document the valid staff-account setup.
 - [x] Verify a Kitchen account can sign in and reach the Kitchen Board after the fix.
