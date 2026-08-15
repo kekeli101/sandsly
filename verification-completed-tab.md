@@ -9,3 +9,5 @@ The newly provisioned `kitchen@mail.com` account successfully signed in through 
 The `kitchen@mail.com` session opened `/kitchen` successfully and displayed the Kitchen Staff console, Active/Completed tabs, and the existing completed-order count.
 
 Live verification completed with disposable order `CB-30477649-569`: it progressed Pending → Accepted → Preparing → Ready → Completed. After completion, Active decreased from 1 to 0, Completed increased from 3 to 4, and the order appeared in the Completed tab with a completed badge, no action button, and its item/total details.
+
+Role visibility verification: `kitchen@mail.com` sees the Staff Tools / Kitchen Board card on `/profile`; the normal customer account `verification.customer.20260815@example.com` does not see that card. The same customer session navigating directly to `/kitchen` receives the Kitchen access only screen.

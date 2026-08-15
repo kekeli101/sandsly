@@ -36,3 +36,6 @@
 - [x] Add a test covering the ready → completed kitchen transition and completed-status persistence.
 - [x] Resolve the reported Kitchen account email/password mismatch and document the valid staff-account setup.
 - [x] Verify a Kitchen account can sign in and reach the Kitchen Board after the fix.
+- [x] Hide Kitchen Board navigation and staff tools from normal customer accounts.
+- [x] Keep Kitchen Board visible and accessible for kitchen@mail.com and explicitly assigned Kitchen/Admin roles.
+- [x] Verify customer and Kitchen account visibility and route protection.
