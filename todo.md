@@ -27,3 +27,10 @@
 - [x] Document independent deployment and migration requirements.
 - [x] Verify the standalone kitchen/admin workflow end to end after detachment.
 - [x] Verify the standalone admin role can access the Kitchen Board after detachment.
+- [x] Add a Completed tab to the Kitchen Board.
+- [x] Filter completed orders separately from active kitchen work.
+- [x] Verify the Completed tab on mobile and desktop.
+- [x] Interactively verify the Completed tab by advancing a ready order to completed and confirming it moves from Active into Completed.
+- [x] Verify the Kitchen Board Completed tab at a desktop viewport as well as mobile.
+- [ ] Interactively verify a ready order can be marked completed and confirm the Active count decreases, the Completed count increases, and the order appears read-only under the Completed tab.
+- [x] Add a test covering the ready → completed kitchen transition and completed-status persistence.
