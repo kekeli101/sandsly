@@ -63,3 +63,5 @@
 - [x] Profile live and local Sandsly performance to identify the largest frontend, image, and API costs.
 - [x] Implement targeted performance optimizations without changing ordering, Kitchen Board, or Telegram behavior.
 - [x] Verify performance improvements with build, tests, responsive screenshots, and runtime checks.
+- [x] Configure future Sandsly Git commits and pushes to use the connected user's GitHub identity where supported, without rewriting existing history.
+- [x] Audit the current implementation and rewrite README.md with accurate standalone setup, deployment, integrations, testing, performance, and GitHub workflow documentation.
