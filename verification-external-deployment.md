@@ -1,0 +1,5 @@
+External verification source: https://sandsly.vercel.app/profile
+
+On 2026-08-16, the Vercel frontend successfully registered and authenticated disposable customer `external.verify.20260816@example.com`, loaded the Supabase-backed catalog through the Render API, added Matcha Cloud Boba, and completed checkout. Order `CB-39905849-168` appeared in Order History with status `pending` and total GH₵95.00.
+The deployed Kitchen Board then showed `CB-39905849-168` as pending/accepted, advanced it through Preparing and Ready, and completed it. The Active count decreased from 2 to 1 and Completed increased from 4 to 5; the remaining active order was an unrelated pending order. This verified the external customer checkout, order persistence, Kitchen workflow, and Completed-tab transition across Vercel, Render, and Supabase.
+Final external Kitchen verification: on https://sandsly.vercel.app/kitchen, the Completed tab showed 5 completed orders, including `CB-39905849-168` for External Verification Customer at GH₵95.00. The card displayed only its completed status and no action controls, confirming the completed-order view is read-only.

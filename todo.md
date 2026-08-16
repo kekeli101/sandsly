@@ -42,10 +42,14 @@
 - [x] Port the Drizzle schema and database adapter from MySQL to Supabase Postgres.
 - [x] Add Vercel SPA configuration and Render API deployment configuration.
 - [x] Update production environment and CORS documentation for Vercel, Render, and Supabase.
-- [ ] Verify the external-hosting build, database migration, authentication, ordering, and Kitchen Board flows.
+- [x] Verify the external-hosting build, database migration, authentication, ordering, and Kitchen Board flows.
 - [x] Seed the real Sandsly categories and menu products into Supabase so the deployed catalog is not empty.
 - [x] Provision the existing kitchen@mail.com Kitchen account in Supabase so staff login survives the database move.
 - [x] Add a Vercel same-origin API rewrite so Render session cookies work reliably in browsers that restrict third-party cookies.
 - [x] Deduplicate kitchen@mail.com in Supabase and keep one canonical Kitchen account.
 - [x] Enforce deterministic unique normalized-email login identity in the Postgres schema and auth lookup.
-- [ ] Re-verify external Kitchen login, Profile staff tools, and /kitchen access after deduplication.
+- [x] Re-verify external Kitchen login, Profile staff tools, and /kitchen access after deduplication.
+- [x] Verify the external Vercel + Render + Supabase customer ordering flow end to end with a disposable customer account.
+- [x] Process that external order through the deployed Kitchen Board status workflow and confirm it appears in Completed.
+- [x] Open the external Vercel /kitchen Completed tab and verify CB-39905849-168 is listed without action controls.
+- [x] Record external Completed-tab evidence: Completed count 5, order CB-39905849-168, read-only card.
