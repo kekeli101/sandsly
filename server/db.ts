@@ -196,7 +196,18 @@ export async function createOrderFromCart(userId: number, customerNote?: string)
       quantity: line.quantity, lineTotalPesewas: line.pricePesewas * line.quantity,
     })));
     await tx.delete(cartItems).where(eq(cartItems.cartId, cart.id));
-    return { orderNumber, status: "pending" as const, ...totals };
+    return {
+      orderNumber,
+      status: "pending" as const,
+      ...totals,
+      items: lines.map((line) => ({
+        name: line.name,
+        quantity: line.quantity,
+        unitPricePesewas: line.pricePesewas,
+        lineTotalPesewas: line.pricePesewas * line.quantity,
+      })),
+      customerNote: customerNote || undefined,
+    };
   });
 }
 

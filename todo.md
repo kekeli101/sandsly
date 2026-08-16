@@ -57,3 +57,6 @@
 - [x] Expand the menu across Boba, Yogurt, Ice Cream, Pizza, Fries, and Pork.
 - [x] Add matching product imagery for the expanded menu and load the new catalog into Supabase.
 - [x] Verify live Kitchen updates, expanded catalog rendering, responsive menu cards, and tests.
+- [ ] Store Telegram bot credentials securely for order notifications.
+- [ ] Send each newly created order to the configured Telegram group.
+- [ ] Add Telegram delivery tests and verify a live group notification after deployment.
