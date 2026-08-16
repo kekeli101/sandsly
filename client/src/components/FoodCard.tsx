@@ -11,7 +11,7 @@ export default function FoodCard({ item, compact = false }: { item: CatalogProdu
     <article className={`group overflow-hidden rounded-[15px] border border-[#3a3634] bg-[#292929] shadow-[4px_4px_0_#080808] transition-transform duration-200 hover:-translate-y-1 ${compact ? "flex h-full flex-col" : ""}`}>
       <div className={`relative overflow-hidden ${compact ? "h-[170px] sm:h-[210px]" : "h-[190px]"}`}>
         {item.badge && <span className="absolute left-3 top-3 z-10 rounded-full bg-[#ff5a1f] px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#17100d]">{item.badge}</span>}
-        <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+        <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
       </div>
       <div className={`flex flex-1 flex-col p-4 ${compact ? "sm:p-5" : ""}`}>

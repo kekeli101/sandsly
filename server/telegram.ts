@@ -2,7 +2,7 @@ type TelegramOrder = {
   orderNumber: string;
   status: string;
   customerName: string;
-  items: Array<{ name: string; quantity: number; unitPricePesewas: number; lineTotalPesewas: number }>;
+  items?: Array<{ name: string; quantity: number; unitPricePesewas: number; lineTotalPesewas: number }>;
   subtotalPesewas: number;
   deliveryFeePesewas: number;
   totalPesewas: number;
@@ -14,7 +14,7 @@ function formatGhs(pesewas: number) {
 }
 
 export function formatTelegramOrderMessage(order: TelegramOrder) {
-  const itemLines = order.items.map(
+  const itemLines = (order.items ?? []).map(
     (item) => `• ${item.name} ×${item.quantity} — ${formatGhs(item.lineTotalPesewas)}`,
   );
   const note = order.customerNote?.trim() ? `\nNote: ${order.customerNote.trim()}` : "";

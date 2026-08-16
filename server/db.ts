@@ -19,6 +19,12 @@ import { isValidKitchenTransition } from "./kitchen-utils";
 const DELIVERY_FEE_PESEWAS = 2000;
 let _db: ReturnType<typeof drizzle> | null = null;
 let _client: ReturnType<typeof postgres> | null = null;
+const CATALOG_CACHE_TTL_MS = 5 * 60_000;
+type CatalogResult = {
+  categories: Array<{ id: number; slug: string; name: string; sortOrder: number }>;
+  products: Array<{ id: string; name: string; description: string; pricePesewas: number; imageUrl: string; badge: string | null; crunchLevel: number; categorySlug: string; categoryName: string; sortOrder: number }>;
+};
+let catalogCache: { value: CatalogResult; expiresAt: number } | null = null;
 
 export async function getDb() {
   if (!_db) {
@@ -110,7 +116,8 @@ export async function getDevelopmentDemoCustomer() {
   return user;
 }
 
-export async function listCatalog() {
+export async function listCatalog(): Promise<CatalogResult> {
+  if (catalogCache && catalogCache.expiresAt > Date.now()) return catalogCache.value;
   const db = await requireDb();
   const [categoryRows, productRows] = await Promise.all([
     db.select({ id: categories.id, slug: categories.slug, name: categories.name, sortOrder: categories.sortOrder })
@@ -123,7 +130,9 @@ export async function listCatalog() {
       .where(and(eq(products.isActive, true), eq(categories.isActive, true)))
       .orderBy(categories.sortOrder, products.sortOrder),
   ]);
-  return { categories: categoryRows, products: productRows };
+  const value = { categories: categoryRows, products: productRows };
+  catalogCache = { value, expiresAt: Date.now() + CATALOG_CACHE_TTL_MS };
+  return value;
 }
 
 async function getOrCreateCart(userId: number) {

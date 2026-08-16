@@ -60,3 +60,6 @@
 - [x] Store Telegram bot credentials securely for order notifications.
 - [x] Send each newly created order to the configured Telegram group.
 - [x] Add Telegram delivery tests and verify a live group notification after deployment.
+- [x] Profile live and local Sandsly performance to identify the largest frontend, image, and API costs.
+- [x] Implement targeted performance optimizations without changing ordering, Kitchen Board, or Telegram behavior.
+- [x] Verify performance improvements with build, tests, responsive screenshots, and runtime checks.
