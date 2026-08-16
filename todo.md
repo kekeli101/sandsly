@@ -56,4 +56,4 @@
 - [x] Add automatic Kitchen Board updates without requiring manual refresh.
 - [x] Expand the menu across Boba, Yogurt, Ice Cream, Pizza, Fries, and Pork.
 - [x] Add matching product imagery for the expanded menu and load the new catalog into Supabase.
-- [ ] Verify live Kitchen updates, expanded catalog rendering, responsive menu cards, and tests.
+- [x] Verify live Kitchen updates, expanded catalog rendering, responsive menu cards, and tests.
