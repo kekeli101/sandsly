@@ -7,7 +7,7 @@ import App from "./App";
 import "./index.css";
 
 const queryClient = new QueryClient();
-const apiBaseUrl = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
+const apiBaseUrl = import.meta.env.DEV ? (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "") : "";
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({

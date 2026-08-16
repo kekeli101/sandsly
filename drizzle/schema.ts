@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { boolean, index, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 /** Core authenticated customer identity. */
@@ -15,7 +16,7 @@ export const users = pgTable("users", {
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [uniqueIndex("users_email_lower_unique").on(sql`lower(${table.email})`)]);
 
 export const customerProfiles = pgTable("customerProfiles", {
   id: serial("id").primaryKey(),
