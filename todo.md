@@ -53,3 +53,7 @@
 - [x] Process that external order through the deployed Kitchen Board status workflow and confirm it appears in Completed.
 - [x] Open the external Vercel /kitchen Completed tab and verify CB-39905849-168 is listed without action controls.
 - [x] Record external Completed-tab evidence: Completed count 5, order CB-39905849-168, read-only card.
+- [x] Add automatic Kitchen Board updates without requiring manual refresh.
+- [x] Expand the menu across Boba, Yogurt, Ice Cream, Pizza, Fries, and Pork.
+- [x] Add matching product imagery for the expanded menu and load the new catalog into Supabase.
+- [ ] Verify live Kitchen updates, expanded catalog rendering, responsive menu cards, and tests.

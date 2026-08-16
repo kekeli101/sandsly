@@ -31,3 +31,22 @@ ON CONFLICT ("id") DO UPDATE SET
   "crunchLevel" = EXCLUDED."crunchLevel",
   "sortOrder" = EXCLUDED."sortOrder",
   "isActive" = EXCLUDED."isActive";
+
+
+INSERT INTO "products" ("id", "categoryId", "name", "description", "pricePesewas", "imageUrl", "badge", "crunchLevel", "sortOrder", "isActive") VALUES
+  ('brown-sugar-milk-tea', (SELECT "id" FROM "categories" WHERE "slug" = 'boba'), 'Brown Sugar Milk Tea', 'Cold black tea, brown sugar pearls, and a creamy caramel finish.', 7000, '/manus-storage/brown-sugar-milk-tea_a7631cbd.jpg', 'Popular', 2, 3, true),
+  ('strawberry-yogurt-crunch', (SELECT "id" FROM "categories" WHERE "slug" = 'yogurt'), 'Strawberry Yogurt Crunch', 'Creamy yogurt, ripe strawberries, toasted granola, and honey.', 6000, '/manus-storage/strawberry-yogurt-crunch_5082f823.jpg', 'Fresh', 2, 2, true),
+  ('mango-coconut-ice-cream', (SELECT "id" FROM "categories" WHERE "slug" = 'ice-cream'), 'Mango Coconut Ice Cream', 'Golden mango ice cream with toasted coconut and mango pieces.', 5000, '/manus-storage/mango-coconut-ice-cream_0713cdef.jpg', 'Cold drop', 1, 2, true),
+  ('suya-pizza', (SELECT "id" FROM "categories" WHERE "slug" = 'pizza'), 'Ghanaian Suya Pizza', 'Blistered crust, spicy suya beef, peppers, onions, and melted cheese.', 15000, '/manus-storage/suya-pizza_05506e0e.jpg', 'Hot', 4, 2, true),
+  ('loaded-plantain-fries', (SELECT "id" FROM "categories" WHERE "slug" = 'fries'), 'Loaded Plantain Fries', 'Golden plantain fries with cheddar sauce, scallions, and smoky crumble.', 8500, '/manus-storage/loaded-plantain-fries_ae72a2e5.jpg', 'New', 4, 2, true),
+  ('sticky-bbq-pork-bites', (SELECT "id" FROM "categories" WHERE "slug" = 'pork'), 'Sticky BBQ Pork Bites', 'Caramelized pork belly bites with barbecue glaze, sesame, and chili.', 13000, '/manus-storage/sticky-bbq-pork-bites_225d22b3.jpg', 'New', 5, 2, true)
+ON CONFLICT ("id") DO UPDATE SET
+  "categoryId" = EXCLUDED."categoryId",
+  "name" = EXCLUDED."name",
+  "description" = EXCLUDED."description",
+  "pricePesewas" = EXCLUDED."pricePesewas",
+  "imageUrl" = EXCLUDED."imageUrl",
+  "badge" = EXCLUDED."badge",
+  "crunchLevel" = EXCLUDED."crunchLevel",
+  "sortOrder" = EXCLUDED."sortOrder",
+  "isActive" = EXCLUDED."isActive";
