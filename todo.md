@@ -83,3 +83,7 @@
 - [x] Verify the mobile side-menu navigation and Rewards coming-soon route at a phone viewport.
 - [x] Interactively verify the mobile three-line side menu opens, closes, and navigates to each primary route at a phone viewport.
 - [x] Record the user-confirmed mobile drawer check in a verification note and remove the unreliable temporary automation script.
+- [x] Diagnose why deployed order notifications are not reaching the configured Telegram chat.
+- [x] Correct the Telegram notification configuration or code path without blocking customer checkout.
+- [x] Verify a real new-order notification reaches the Telegram group and add regression coverage for the diagnosed failure mode.
+- [x] Create a disposable live checkout order after the Render repair and confirm its formatted new-order notification reaches the Telegram group.

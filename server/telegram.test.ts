@@ -40,6 +40,7 @@ describe("Telegram order notifications", () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
     await expect(notifyTelegramNewOrder(order)).resolves.toBe(true);
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.telegram.org/bottest-token/sendMessage",
@@ -48,6 +49,7 @@ describe("Telegram order notifications", () => {
         body: JSON.stringify({ chat_id: "-100123", text: formatTelegramOrderMessage(order) }),
       }),
     );
+    expect(infoSpy).toHaveBeenCalledWith("[Telegram] New-order notification accepted for CB-TEST-123");
   });
 
   it("skips delivery when Telegram credentials are absent", async () => {

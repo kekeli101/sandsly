@@ -73,5 +73,6 @@ export async function notifyTelegramNewOrder(order: TelegramOrder) {
 
   const payload = (await response.json()) as { ok?: boolean };
   if (!payload.ok) throw new Error("Telegram sendMessage returned ok=false");
+  console.info(`[Telegram] New-order notification accepted for ${order.orderNumber}`);
   return true;
 }
