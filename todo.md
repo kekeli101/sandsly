@@ -101,3 +101,6 @@
 - [x] Simulate two rapid add-to-bag mutations and prove query cancellation prevents stale cart data from overwriting the optimistic quantity.
 - [x] Simulate a stale cart-result write after rapid optimistic additions and prove the canceled query cannot overwrite the optimistic quantity.
 - [x] Prepare a client-ready progress report covering delivered capabilities, validation status, and prioritized future improvements.
+- [x] Diagnose slow cart quantity and removal actions.
+- [x] Implement optimistic cart editing with safe rollback and final server reconciliation.
+- [ ] Verify fast repeated quantity updates, removal, totals, and failure recovery in the live cart.

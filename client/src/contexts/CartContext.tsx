@@ -6,6 +6,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import type { CartLine, CatalogProduct } from "@/lib/catalog-types";
 import { createCartMutationLifecycle, type OptimisticAddContext } from "@/lib/cart-mutation-lifecycle";
+import { createCartEditMutationLifecycle, type OptimisticCartEditContext } from "@/lib/cart-edit-mutation-lifecycle";
 
 type CartContextValue = {
   lines: CartLine[];
@@ -34,6 +35,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setData: (next) => utils.storefront.cart.setData(undefined, next),
     invalidate: () => utils.storefront.cart.invalidate(),
   }), [utils]);
+  const editLifecycle = useMemo(() => createCartEditMutationLifecycle({
+    cancel: () => utils.storefront.cart.cancel(),
+    getData: () => utils.storefront.cart.getData(),
+    setData: (next) => utils.storefront.cart.setData(undefined, next),
+    invalidate: () => utils.storefront.cart.invalidate(),
+  }), [utils]);
   const addMutation = trpc.storefront.addToCart.useMutation({
     onMutate: () => addLifecycle.onMutate(),
     onError: (error, _input, context) => {
@@ -43,7 +50,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     },
     onSettled: () => addLifecycle.onSettled(),
   });
-  const setQuantityMutation = trpc.storefront.setCartItemQuantity.useMutation({ onSuccess: refreshCart });
+  const setQuantityMutation = trpc.storefront.setCartItemQuantity.useMutation({
+    onMutate: (input) => editLifecycle.onMutate(input),
+    onError: (error, _input, context) => {
+      editLifecycle.onError(context as OptimisticCartEditContext | undefined);
+      toast.error("Couldn’t update your bag", { description: error.message });
+    },
+    onSettled: (_data, _error, _input, context) => editLifecycle.onSettled(context as OptimisticCartEditContext | undefined),
+  });
   const clearMutation = trpc.storefront.clearCart.useMutation({ onSuccess: refreshCart });
 
   const value = useMemo<CartContextValue>(() => {
@@ -60,7 +74,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       addMutation.mutate({ productId: item.id, quantity: 1 });
     };
     const updateQuantity = (id: string, delta: number) => {
-      const line = lines.find((item) => item.id === id);
+      const line = (utils.storefront.cart.getData()?.items ?? lines).find((item) => item.id === id);
       if (!line) return;
       setQuantityMutation.mutate({ productId: id, quantity: Math.max(0, line.quantity + delta) });
     };
@@ -79,7 +93,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeItem,
       clearCart,
     };
-  }, [addMutation, cartQuery.data, cartQuery.isLoading, clearMutation, isAuthenticated, setQuantityMutation]);
+  }, [addMutation, cartQuery.data, cartQuery.isLoading, clearMutation, isAuthenticated, setQuantityMutation, utils]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
