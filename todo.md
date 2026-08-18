@@ -87,6 +87,7 @@
 - [x] Correct the Telegram notification configuration or code path without blocking customer checkout.
 - [x] Verify a real new-order notification reaches the Telegram group and add regression coverage for the diagnosed failure mode.
 - [x] Create a disposable live checkout order after the Render repair and confirm its formatted new-order notification reaches the Telegram group.
-- [ ] Replace URL-only product image entry with Kitchen/Admin device image selection and upload.
-- [ ] Persist uploaded menu images through production-compatible object storage rather than ephemeral server files or database blobs.
-- [ ] Verify staff image upload, catalog rendering, authorization, file validation, and deployment documentation.
+- [x] Replace URL-only product image entry with Kitchen/Admin device image selection and upload.
+- [x] Persist uploaded menu images through production-compatible object storage rather than ephemeral server files or database blobs.
+- [x] Verify staff image upload, catalog rendering, authorization, file validation, and deployment documentation.
+- [x] Create a disposable menu item using a staff-uploaded image, verify its image renders in the customer catalog, then deactivate the test item and record the evidence.
