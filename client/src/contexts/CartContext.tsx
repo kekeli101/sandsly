@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import type { CartLine, CatalogProduct } from "@/lib/catalog-types";
+import { createCartMutationLifecycle, type OptimisticAddContext } from "@/lib/cart-mutation-lifecycle";
 
 type CartContextValue = {
   lines: CartLine[];
@@ -27,7 +28,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const utils = trpc.useUtils();
   const cartQuery = trpc.storefront.cart.useQuery(undefined, { enabled: isAuthenticated, retry: false });
   const refreshCart = () => utils.storefront.cart.invalidate();
-  const addMutation = trpc.storefront.addToCart.useMutation({ onSuccess: refreshCart });
+  const addLifecycle = useMemo(() => createCartMutationLifecycle({
+    cancel: () => utils.storefront.cart.cancel(),
+    getData: () => utils.storefront.cart.getData(),
+    setData: (next) => utils.storefront.cart.setData(undefined, next),
+    invalidate: () => utils.storefront.cart.invalidate(),
+  }), [utils]);
+  const addMutation = trpc.storefront.addToCart.useMutation({
+    onMutate: () => addLifecycle.onMutate(),
+    onError: (error, _input, context) => {
+      const optimisticContext = context as OptimisticAddContext | undefined;
+      addLifecycle.onError(optimisticContext);
+      if (optimisticContext?.product) toast.error("Couldn’t add that item", { id: `bag-${optimisticContext.product.id}`, description: error.message });
+    },
+    onSettled: () => addLifecycle.onSettled(),
+  });
   const setQuantityMutation = trpc.storefront.setCartItemQuantity.useMutation({ onSuccess: refreshCart });
   const clearMutation = trpc.storefront.clearCart.useMutation({ onSuccess: refreshCart });
 
@@ -39,10 +54,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         window.location.assign("/profile");
         return;
       }
-      addMutation.mutate({ productId: item.id, quantity: 1 }, {
-        onSuccess: () => toast.success(`${item.name} added`, { description: "Saved to your bag." }),
-        onError: (error) => toast.error("Couldn’t add that item", { description: error.message }),
-      });
+      const toastId = `bag-${item.id}`;
+      toast.success(`${item.name} added`, { id: toastId, description: "In your bag." });
+      addLifecycle.enqueue(item);
+      addMutation.mutate({ productId: item.id, quantity: 1 });
     };
     const updateQuantity = (id: string, delta: number) => {
       const line = lines.find((item) => item.id === id);

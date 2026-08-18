@@ -91,3 +91,12 @@
 - [x] Persist uploaded menu images through production-compatible object storage rather than ephemeral server files or database blobs.
 - [x] Verify staff image upload, catalog rendering, authorization, file validation, and deployment documentation.
 - [x] Create a disposable menu item using a staff-uploaded image, verify its image renders in the customer catalog, then deactivate the test item and record the evidence.
+- [x] Diagnose the delayed add-to-bag confirmation and cart update path.
+- [x] Implement immediate optimistic add-to-bag feedback with safe rollback on persistence errors.
+- [ ] Verify rapid repeated add-to-bag interactions, cart-count accuracy, and failure recovery.
+- [x] Refactor add-to-bag to preserve a full prior cart snapshot, cancel in-flight cart reads, and reconcile the server result after optimistic persistence.
+- [x] Add regression coverage for optimistic cart reconciliation during request failures and in-flight query races.
+- [x] Add integration-level coverage for CartContext query cancellation and stale-query race prevention during rapid additions.
+- [x] Add integration-level coverage proving a failed mutation restores the full prior cart snapshot and triggers final reconciliation.
+- [x] Simulate two rapid add-to-bag mutations and prove query cancellation prevents stale cart data from overwriting the optimistic quantity.
+- [x] Simulate a stale cart-result write after rapid optimistic additions and prove the canceled query cannot overwrite the optimistic quantity.
