@@ -12,7 +12,7 @@ const productFields = z.object({
 export const kitchenRouter = router({
   orders: kitchenProcedure.query(() => listKitchenOrders()),
   updateStatus: kitchenProcedure.input(z.object({ orderId: z.number().int().positive(), status: z.enum(orderStatusValues) }))
-    .mutation(({ input }) => updateKitchenOrderStatus(input.orderId, input.status)),
+    .mutation(({ ctx, input }) => updateKitchenOrderStatus(input.orderId, input.status, ctx.user.id)),
   menu: kitchenProcedure.query(() => listMenuManagementData()),
   createProduct: kitchenProcedure.input(productFields.extend({ id: z.string().trim().min(1).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) }))
     .mutation(({ input }) => createMenuProduct(input)),

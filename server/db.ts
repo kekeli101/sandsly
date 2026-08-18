@@ -8,9 +8,13 @@ import {
   customerProfiles,
   type InsertUser,
   orderItems,
+  orderStatusHistory,
   orders,
+  payments,
   products,
   type OrderStatus,
+  type OrderType,
+  type PaymentMethod,
   users,
 } from "../drizzle/schema";
 import { calculateOrderTotals } from "./storefront-utils";
@@ -237,19 +241,44 @@ export async function clearCartForUser(userId: number) {
   return { success: true } as const;
 }
 
-export async function createOrderFromCart(userId: number, customerNote?: string) {
+export type CheckoutInput = {
+  customerNote?: string;
+  orderType: OrderType;
+  paymentMethod: PaymentMethod;
+  deliveryPhone?: string;
+  deliveryAddress?: string;
+  deliveryInstructions?: string;
+};
+
+export async function createOrderFromCart(userId: number, input: CheckoutInput) {
   const db = await requireDb();
   const cart = await getOrCreateCart(userId);
   return db.transaction(async (tx) => {
     const lines = await tx.select({
       id: products.id, name: products.name, pricePesewas: products.pricePesewas, quantity: cartItems.quantity,
-    }).from(cartItems).innerJoin(products, eq(cartItems.productId, products.id)).where(eq(cartItems.cartId, cart.id));
+    }).from(cartItems).innerJoin(products, eq(cartItems.productId, products.id)).where(and(eq(cartItems.cartId, cart.id), eq(products.isActive, true)));
     if (!lines.length) throw new Error("Your bag is empty");
-    const totals = calculateOrderTotals(lines.map((line) => ({ unitPricePesewas: line.pricePesewas, quantity: line.quantity })), DELIVERY_FEE_PESEWAS);
+    if (input.orderType === "delivery" && (!input.deliveryPhone?.trim() || !input.deliveryAddress?.trim())) {
+      throw new Error("Delivery phone and address are required for delivery orders");
+    }
+    if (input.orderType === "pickup" && input.paymentMethod === "cash_on_delivery") {
+      throw new Error("Cash on delivery is only available for delivery orders");
+    }
+    if (input.orderType === "delivery" && input.paymentMethod === "cash_on_pickup") {
+      throw new Error("Cash on pickup is only available for pickup orders");
+    }
+    const deliveryFee = input.orderType === "delivery" ? DELIVERY_FEE_PESEWAS : 0;
+    const totals = calculateOrderTotals(lines.map((line) => ({ unitPricePesewas: line.pricePesewas, quantity: line.quantity })), deliveryFee);
     const orderNumber = `CB-${Date.now().toString().slice(-8)}-${Math.floor(100 + Math.random() * 900)}`;
     const [created] = await tx.insert(orders).values({
-      orderNumber, userId, status: "pending", currency: "GHS", ...totals, customerNote: customerNote || null,
+      orderNumber, userId, status: "pending", orderType: input.orderType, currency: "GHS", ...totals,
+      customerNote: input.customerNote?.trim() || null,
+      deliveryPhone: input.orderType === "delivery" ? input.deliveryPhone?.trim() || null : null,
+      deliveryAddress: input.orderType === "delivery" ? input.deliveryAddress?.trim() || null : null,
+      deliveryInstructions: input.orderType === "delivery" ? input.deliveryInstructions?.trim() || null : null,
     }).returning({ id: orders.id });
+    await tx.insert(payments).values({ orderId: created.id, method: input.paymentMethod, status: "pending", amountPesewas: totals.totalPesewas });
+    await tx.insert(orderStatusHistory).values({ orderId: created.id, previousStatus: null, nextStatus: "pending", changedByUserId: userId });
     await tx.insert(orderItems).values(lines.map((line) => ({
       orderId: created.id, productId: line.id, productName: line.name, unitPricePesewas: line.pricePesewas,
       quantity: line.quantity, lineTotalPesewas: line.pricePesewas * line.quantity,
@@ -258,6 +287,9 @@ export async function createOrderFromCart(userId: number, customerNote?: string)
     return {
       orderNumber,
       status: "pending" as const,
+      orderType: input.orderType,
+      paymentMethod: input.paymentMethod,
+      paymentStatus: "pending" as const,
       ...totals,
       items: lines.map((line) => ({
         name: line.name,
@@ -265,15 +297,37 @@ export async function createOrderFromCart(userId: number, customerNote?: string)
         unitPricePesewas: line.pricePesewas,
         lineTotalPesewas: line.pricePesewas * line.quantity,
       })),
-      customerNote: customerNote || undefined,
+      customerNote: input.customerNote?.trim() || undefined,
+      deliveryPhone: input.orderType === "delivery" ? input.deliveryPhone?.trim() || undefined : undefined,
+      deliveryAddress: input.orderType === "delivery" ? input.deliveryAddress?.trim() || undefined : undefined,
+      deliveryInstructions: input.orderType === "delivery" ? input.deliveryInstructions?.trim() || undefined : undefined,
     };
   });
 }
 
 export async function listOrdersForUser(userId: number) {
   const db = await requireDb();
-  return db.select({ id: orders.id, orderNumber: orders.orderNumber, status: orders.status, totalPesewas: orders.totalPesewas, createdAt: orders.createdAt })
-    .from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+  const orderRows = await db.select({
+    id: orders.id, orderNumber: orders.orderNumber, status: orders.status, orderType: orders.orderType,
+    totalPesewas: orders.totalPesewas, deliveryFeePesewas: orders.deliveryFeePesewas, customerNote: orders.customerNote,
+    deliveryPhone: orders.deliveryPhone, deliveryAddress: orders.deliveryAddress, deliveryInstructions: orders.deliveryInstructions,
+    createdAt: orders.createdAt, paymentMethod: payments.method, paymentStatus: payments.status,
+  }).from(orders).leftJoin(payments, eq(payments.orderId, orders.id)).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+  if (!orderRows.length) return [];
+  const ids = orderRows.map((order) => order.id);
+  const [items, history] = await Promise.all([
+    db.select({ orderId: orderItems.orderId, productName: orderItems.productName, quantity: orderItems.quantity, lineTotalPesewas: orderItems.lineTotalPesewas })
+      .from(orderItems).where(inArray(orderItems.orderId, ids)),
+    db.select({ orderId: orderStatusHistory.orderId, previousStatus: orderStatusHistory.previousStatus, nextStatus: orderStatusHistory.nextStatus, createdAt: orderStatusHistory.createdAt })
+      .from(orderStatusHistory).where(inArray(orderStatusHistory.orderId, ids)).orderBy(asc(orderStatusHistory.createdAt)),
+  ]);
+  return orderRows.map((order) => ({
+    ...order,
+    paymentMethod: order.paymentMethod ?? "cash_on_pickup",
+    paymentStatus: order.paymentStatus ?? "pending",
+    items: items.filter((item) => item.orderId === order.id),
+    history: history.filter((event) => event.orderId === order.id),
+  }));
 }
 
 export async function getCustomerProfile(userId: number) {
@@ -290,27 +344,49 @@ export async function saveCustomerProfile(userId: number, phone?: string, defaul
 
 export async function listRecentOrdersForAdmin() {
   const db = await requireDb();
-  return db.select({ id: orders.id, orderNumber: orders.orderNumber, status: orders.status, totalPesewas: orders.totalPesewas, createdAt: orders.createdAt, customerName: users.name })
-    .from(orders).innerJoin(users, eq(orders.userId, users.id)).orderBy(desc(orders.createdAt)).limit(50);
+  return db.select({ id: orders.id, orderNumber: orders.orderNumber, status: orders.status, orderType: orders.orderType, totalPesewas: orders.totalPesewas, createdAt: orders.createdAt, customerName: users.name, paymentMethod: payments.method, paymentStatus: payments.status })
+    .from(orders).innerJoin(users, eq(orders.userId, users.id)).leftJoin(payments, eq(payments.orderId, orders.id)).orderBy(desc(orders.createdAt)).limit(50);
+}
+
+export async function getAdminDashboardData() {
+  const db = await requireDb();
+  const [summary] = await db.select({
+    totalOrders: sql<number>`count(*)::int`,
+    pendingOrders: sql<number>`count(*) filter (where ${orders.status} in ('pending', 'accepted', 'preparing', 'ready', 'out_for_delivery'))::int`,
+    completedOrders: sql<number>`count(*) filter (where ${orders.status} in ('completed', 'delivered'))::int`,
+    totalSalesPesewas: sql<number>`coalesce(sum(${orders.totalPesewas}) filter (where ${orders.status} in ('completed', 'delivered')), 0)::int`,
+  }).from(orders);
+  const [customerCount] = await db.select({ count: sql<number>`count(*)::int` }).from(users).where(eq(users.role, "user"));
+  const popularItems = await db.select({
+    name: orderItems.productName,
+    quantity: sql<number>`sum(${orderItems.quantity})::int`,
+  }).from(orderItems).innerJoin(orders, eq(orderItems.orderId, orders.id))
+    .where(inArray(orders.status, ["completed", "delivered"]))
+    .groupBy(orderItems.productName).orderBy(desc(sql`sum(${orderItems.quantity})`)).limit(5);
+  return { summary: { ...summary, customerCount: customerCount.count }, popularItems, recentOrders: await listRecentOrdersForAdmin() };
 }
 
 export async function listKitchenOrders() {
   const db = await requireDb();
   const orderRows = await db.select({
-    id: orders.id, orderNumber: orders.orderNumber, status: orders.status, totalPesewas: orders.totalPesewas,
-    customerName: users.name, customerNote: orders.customerNote, createdAt: orders.createdAt,
-  }).from(orders).innerJoin(users, eq(orders.userId, users.id)).orderBy(desc(orders.createdAt)).limit(80);
+    id: orders.id, orderNumber: orders.orderNumber, status: orders.status, orderType: orders.orderType, totalPesewas: orders.totalPesewas,
+    customerName: users.name, customerNote: orders.customerNote, deliveryPhone: orders.deliveryPhone, deliveryAddress: orders.deliveryAddress,
+    deliveryInstructions: orders.deliveryInstructions, createdAt: orders.createdAt, paymentMethod: payments.method, paymentStatus: payments.status,
+  }).from(orders).innerJoin(users, eq(orders.userId, users.id)).leftJoin(payments, eq(payments.orderId, orders.id)).orderBy(desc(orders.createdAt)).limit(80);
   if (!orderRows.length) return [];
   const items = await db.select({ orderId: orderItems.orderId, productName: orderItems.productName, quantity: orderItems.quantity })
     .from(orderItems).where(inArray(orderItems.orderId, orderRows.map((order) => order.id)));
-  return orderRows.map((order) => ({ ...order, items: items.filter((item) => item.orderId === order.id) }));
+  return orderRows.map((order) => ({ ...order, paymentMethod: order.paymentMethod ?? "cash_on_pickup", paymentStatus: order.paymentStatus ?? "pending", items: items.filter((item) => item.orderId === order.id) }));
 }
 
-export async function updateKitchenOrderStatus(orderId: number, nextStatus: OrderStatus) {
+export async function updateKitchenOrderStatus(orderId: number, nextStatus: OrderStatus, changedByUserId: number) {
   const db = await requireDb();
-  const order = (await db.select({ id: orders.id, status: orders.status }).from(orders).where(eq(orders.id, orderId)).limit(1))[0];
+  const order = (await db.select({ id: orders.id, status: orders.status, orderType: orders.orderType }).from(orders).where(eq(orders.id, orderId)).limit(1))[0];
   if (!order) throw new Error("Order not found");
-  if (!isValidKitchenTransition(order.status, nextStatus)) throw new Error(`Cannot move an ${order.status} order to ${nextStatus}`);
-  await db.update(orders).set({ status: nextStatus, updatedAt: new Date() }).where(eq(orders.id, orderId));
+  if (!isValidKitchenTransition(order.status, nextStatus, order.orderType)) throw new Error(`Cannot move an ${order.status} order to ${nextStatus}`);
+  await db.transaction(async (tx) => {
+    await tx.update(orders).set({ status: nextStatus, updatedAt: new Date() }).where(eq(orders.id, orderId));
+    await tx.insert(orderStatusHistory).values({ orderId, previousStatus: order.status, nextStatus, changedByUserId });
+  });
   return { id: orderId, status: nextStatus };
 }

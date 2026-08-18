@@ -1,6 +1,6 @@
 # Sandsly
 
-Sandsly is a mobile-first restaurant ordering platform for **The Crunch Bite**, built for Ghanaian customers and kitchen staff. The product supports a live catalog, Ghana Cedi pricing, password authentication, persistent carts, checkout, order history, role-protected kitchen operations, automatic Kitchen Board polling, and Telegram notifications for new orders.
+Sandsly is a mobile-first restaurant ordering platform for **The Crunch Bite**, built for Ghanaian customers, kitchen staff, and administrators. The product supports a live catalog, Ghana Cedi pricing, password authentication, persistent carts, pickup and delivery checkout, payment-state records, tracked order timelines, role-protected operations, automatic Kitchen Board polling, operational reporting, and Telegram notifications for new orders.
 
 > **Current deployment:** Vercel serves the React storefront, Render serves the Express/tRPC API, and Supabase provides PostgreSQL persistence.
 
@@ -8,12 +8,14 @@ Sandsly is a mobile-first restaurant ordering platform for **The Crunch Bite**, 
 
 | Area | Current behavior |
 | --- | --- |
-| Storefront | Responsive Home, Menu, Cart, Profile, Rewards placeholder, and order-history routes |
+| Storefront | Responsive Home, searchable Menu, Cart, Profile, Rewards placeholder, and order-tracking routes |
 | Catalog | Boba, Yogurt, Ice Cream, Pizza, Fries, and Pork categories with active products and hosted food imagery |
 | Currency | All prices, delivery fees, totals, and notifications use Ghana cedis (`GH₵`) |
 | Customer accounts | Local email/password registration and sign-in with signed HTTP-only sessions |
-| Cart and checkout | Database-backed cart, quantity changes, item removal, checkout, and order history |
-| Kitchen Board | Kitchen/Admin-only access with Active and Completed tabs, status transitions, and five-second polling |
+| Cart and checkout | Database-backed cart, quantity changes, pickup/delivery selection, delivery validation, notes, payment-method selection, and payment-state records |
+| Customer tracking | Live-refreshing Profile order cards with item details, payment state, fulfillment type, and a status timeline |
+| Kitchen Board | Kitchen/Admin-only access with Active and Finished tabs, pickup/delivery-aware status transitions, payment context, delivery details, and five-second polling |
+| Admin dashboard | Admin-only `/admin` reporting for order totals, active/finished counts, completed sales, customer count, popular dishes, and recent orders |
 | Telegram | Successful checkouts are formatted and sent to the configured Telegram group through the official Bot API |
 | Performance | Compressed product photography, native lazy loading, catalog caching, and route-level JavaScript splitting |
 
@@ -32,7 +34,7 @@ Drizzle ORM + PostgreSQL on Supabase
                 +--> Telegram Bot API for new-order notifications
 ```
 
-The frontend uses React Query through tRPC. Public catalog reads are cached for five minutes in the browser and five minutes per API process. Product cards load images lazily and asynchronously, while the Home hero is prioritized. The six expanded-menu images are compressed hosted assets rather than repository files.
+The frontend uses React Query through tRPC. Public catalog reads use a short freshness window so staff availability changes reach customer storefronts quickly. Product cards load images lazily and asynchronously, while the Home hero is prioritized. The expanded-menu images are compressed hosted assets rather than repository files.
 
 ## Repository layout
 
@@ -46,7 +48,7 @@ client/
     lib/              tRPC client and catalog types/fallback data
 server/
   _core/              Express, tRPC, cookies, and runtime plumbing
-  routers/            Auth, storefront, and kitchen procedures
+  routers/            Auth, storefront, kitchen, catalog, and admin procedures
   db.ts               Supabase/Postgres queries and catalog cache
   telegram.ts         Server-only Telegram Bot API notifier
 drizzle/
@@ -56,6 +58,7 @@ supabase/
   migrations/         Database migration history
 scripts/
   seed-supabase.mjs   Applies the catalog seed to Supabase
+  apply-supabase-migration.mjs  Applies a reviewed production migration to Supabase
 render.yaml           Render API service configuration
 vercel.json           Vercel frontend build and same-origin API rewrite
 STANDALONE_SETUP.md   Detailed external deployment notes
@@ -111,9 +114,9 @@ Sandsly uses local email/password authentication with signed sessions. Passwords
 
 | Role | Access |
 | --- | --- |
-| `user` | Storefront, cart, checkout, profile, and personal order history |
-| `kitchen` | All customer features plus the Kitchen Board |
-| `admin` | All customer features plus the Kitchen Board and administrative kitchen access |
+| `user` | Storefront, cart, checkout, profile, and personal order tracking |
+| `kitchen` | All customer features plus the Kitchen Board and staff menu management |
+| `admin` | All customer features plus the Kitchen Board, menu management, and the `/admin` reporting dashboard |
 
 Public registration creates customer accounts with the `user` role. Provision kitchen accounts through an authorized database administration process. Staff sign in at `/profile`; the Profile page exposes **Open Kitchen Board** only for Kitchen/Admin roles, and `/kitchen` enforces the same server-side restriction.
 
@@ -124,16 +127,18 @@ The canonical staff account used in verification is `kitchen@mail.com`. Rotate i
 The Kitchen Board is available at `/kitchen` to authenticated Kitchen and Admin accounts. It separates orders into **Active** and **Completed** tabs. Active orders can move through the valid workflow:
 
 ```text
-Pending → Accepted → Preparing → Ready → Completed
+Pickup: Pending → Accepted → Preparing → Ready → Completed
+
+Delivery: Pending → Accepted → Preparing → Ready → Out for Delivery → Delivered
 ```
 
-The board polls every five seconds and refreshes when the browser regains focus. Completed orders are read-only. Status validation is enforced in the API rather than only in the UI.
+The board polls every five seconds and refreshes when the browser regains focus. Finished orders are read-only. Status validation and immutable status-history writes are enforced in the API rather than only in the UI.
 
 The same staff console now includes **Manage menu**. Kitchen/Admin users can add a product, edit its category, name, description, Ghana Cedi price, image URL, badge, crunch level, and sort order, and remove or restore products from the customer-facing menu. Removal is implemented as a soft deactivation so existing order history keeps its product snapshots. Customer catalog reads exclude inactive products, and catalog caches are invalidated after staff changes with a short freshness window for other storefront sessions.
 
 ## Telegram order notifications
 
-After a successful checkout, the API formats a message containing the order number, customer name, line items, quantities, subtotal, delivery fee, total, status, and optional customer note. It sends the message to the configured group through Telegram’s `sendMessage` endpoint.
+After a successful checkout, the API formats a message containing the order number, customer name, fulfillment type, line items, quantities, subtotal, delivery fee, total, payment method/state, necessary delivery details, status, and optional customer note. It sends the message to the configured group through Telegram’s `sendMessage` endpoint.
 
 Telegram delivery is intentionally non-blocking: if Telegram is unavailable, the customer order remains saved and checkout still succeeds. Delivery failures are logged server-side for diagnosis.
 
@@ -150,7 +155,7 @@ Do not place either value in `VITE_*` variables, frontend code, Git history, scr
 
 ### Supabase
 
-Create or use a Supabase PostgreSQL project, obtain its connection string, and apply the reviewed migrations. Seed the catalog with `scripts/seed-supabase.mjs`. The database stores users, categories, products, carts, cart items, orders, and order items.
+Create or use a Supabase PostgreSQL project, obtain its connection string, and apply the reviewed migrations. Seed the catalog with `scripts/seed-supabase.mjs`. The database stores users, categories, products, carts, cart items, orders, order items, payments, delivery details, and append-only order-status history.
 
 ### Render API
 
@@ -194,8 +199,10 @@ After deployment, verify the following in order:
 2. Vercel can load the Home and Menu routes.
 3. A customer can register, sign in, add an item, and place an order.
 4. The order appears in the Kitchen Board without a manual refresh.
-5. The order transitions through the kitchen workflow and appears read-only under Completed.
-6. The Telegram group receives the order number, items, total, and pending status.
+5. Test both pickup and delivery checkout, including delivery contact/address validation and the stored payment method/state.
+6. The order transitions through the correct pickup or delivery workflow and appears read-only when finished.
+7. The customer Profile renders order status history, item details, fulfillment type, and payment state.
+8. The Telegram group receives the order number, items, total, fulfillment type, payment state, and required delivery details.
 
 See [`STANDALONE_SETUP.md`](./STANDALONE_SETUP.md) for migration and deployment details already used for the external release.
 
@@ -210,8 +217,9 @@ See [`STANDALONE_SETUP.md`](./STANDALONE_SETUP.md) for migration and deployment 
 | `pnpm build` | Build the client and bundled production API |
 | `pnpm start` | Start the production API/server bundle |
 | `node scripts/seed-supabase.mjs` | Apply the idempotent catalog seed |
+| `node scripts/apply-supabase-migration.mjs supabase/migrations/<file>.sql` | Apply one reviewed migration to the external Supabase database |
 
-The automated suite covers authentication logout, role access, kitchen transitions, storefront checkout, Supabase connectivity, Telegram credentials, and Telegram message formatting/delivery. The current suite contains 13 passing tests across nine test files.
+The automated suite covers authentication logout, role access, customer catalog visibility, pickup and delivery kitchen transitions, storefront checkout, Supabase connectivity, Telegram credentials, and Telegram message formatting/delivery. The current suite contains 17 passing tests across ten test files.
 
 ## Performance practices
 

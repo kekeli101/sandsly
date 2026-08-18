@@ -28,13 +28,13 @@ describe("kitchen router", () => {
     mocks.updateKitchenOrderStatus.mockResolvedValue({ id: 8, status: "accepted" });
     await expect(appRouter.createCaller(contextFor("user")).kitchen.orders()).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(appRouter.createCaller(contextFor("kitchen")).kitchen.updateStatus({ orderId: 8, status: "accepted" })).resolves.toEqual({ id: 8, status: "accepted" });
-    expect(mocks.updateKitchenOrderStatus).toHaveBeenCalledWith(8, "accepted");
+    expect(mocks.updateKitchenOrderStatus).toHaveBeenCalledWith(8, "accepted", 5);
   });
 
   it("persists a ready order as completed for kitchen staff", async () => {
     mocks.updateKitchenOrderStatus.mockResolvedValue({ id: 21, status: "completed" });
     await expect(appRouter.createCaller(contextFor("kitchen")).kitchen.updateStatus({ orderId: 21, status: "completed" })).resolves.toEqual({ id: 21, status: "completed" });
-    expect(mocks.updateKitchenOrderStatus).toHaveBeenCalledWith(21, "completed");
+    expect(mocks.updateKitchenOrderStatus).toHaveBeenCalledWith(21, "completed", 5);
   });
 
   it("blocks customers and allows kitchen staff to manage menu products", async () => {

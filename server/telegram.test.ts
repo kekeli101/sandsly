@@ -10,6 +10,11 @@ const order = {
   deliveryFeePesewas: 2000,
   totalPesewas: 17000,
   customerNote: "Leave at the front desk",
+  orderType: "delivery" as const,
+  paymentMethod: "mobile_money",
+  paymentStatus: "pending",
+  deliveryPhone: "024 000 0000",
+  deliveryAddress: "42 Test Street, Accra",
 };
 
 afterEach(() => {
@@ -24,6 +29,9 @@ describe("Telegram order notifications", () => {
     expect(message).toContain("Matcha Cloud Boba ×2 — GH₵ 150.00");
     expect(message).toContain("Total: GH₵ 170.00");
     expect(message).toContain("Leave at the front desk");
+    expect(message).toContain("Type: Delivery");
+    expect(message).toContain("Payment: mobile money (pending)");
+    expect(message).toContain("42 Test Street, Accra");
   });
 
   it("posts the formatted order to the configured Telegram group", async () => {

@@ -72,3 +72,6 @@
 - [x] Add visible success and error feedback for menu-management mutations.
 - [x] Interactively verify the Kitchen Dashboard create, edit, remove, and restore controls under a staff session.
 - [x] Add durable automated regression coverage for active and inactive customer catalog visibility.
+- [x] Audit the supplied restaurant SRS against Sandsly and document prioritized implementation gaps.
+- [x] Implement the selected SRS-aligned customer, operational, and administrative workflows.
+- [x] Add end-to-end tests and update documentation for the SRS-aligned release.

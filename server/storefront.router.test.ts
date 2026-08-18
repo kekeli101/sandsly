@@ -52,7 +52,7 @@ describe("storefront protected procedures", () => {
     const order = await caller.storefront.checkout({ customerNote: "Less ice" });
 
     expect(mocks.addCartItem).toHaveBeenCalledWith(42, "matcha-cloud-boba", 2);
-    expect(mocks.createOrderFromCart).toHaveBeenCalledWith(42, "Less ice");
+    expect(mocks.createOrderFromCart).toHaveBeenCalledWith(42, { customerNote: "Less ice", orderType: "pickup", paymentMethod: "cash_on_pickup" });
     expect(order).toMatchObject({ orderNumber: "CB-12345678-321", totalPesewas: 9500 });
   });
 });

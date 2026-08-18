@@ -6,17 +6,17 @@ Sandsly now runs with its own local email/password authentication and signed coo
 
 ```bash
 NODE_ENV=development
-DATABASE_URL=mysql://user:password@127.0.0.1:3306/sandsly
+SUPABASE_DATABASE_URL=postgresql://postgres:<password>@<host>:5432/postgres
 JWT_SECRET=replace-with-a-long-random-secret
 ```
 
-`JWT_SECRET` must be a long, random value in production. The database is MySQL-compatible and the existing Drizzle migrations create the catalog, users, carts, orders, profiles, roles, and password hash column.
+`JWT_SECRET` must be a long, random value in production. Sandsly uses PostgreSQL on Supabase. The Drizzle schema and reviewed migrations create the catalog, users, carts, orders, profiles, roles, payments, and order-status history.
 
 ## Install and run
 
 ```bash
 pnpm install
-pnpm drizzle-kit migrate
+pnpm drizzle-kit generate
 pnpm dev
 ```
 
@@ -41,7 +41,7 @@ The storefront uses public image URLs for menu photography and a repository-owne
 
 ## Deployment
 
-Deploy the Node server and the built `dist` directory to any host that supports Node.js, Express, and a MySQL-compatible database. Configure the same environment variables in the host’s secret manager, enable HTTPS, and use a persistent database. If the deployment is behind a reverse proxy, forward the `X-Forwarded-Proto` header so secure cookie behavior remains correct.
+Deploy the Node server and the built `dist` directory to any host that supports Node.js, Express, and PostgreSQL. Configure the same environment variables in the host’s secret manager, enable HTTPS, and use a persistent database. If the deployment is behind a reverse proxy, forward the `X-Forwarded-Proto` header so secure cookie behavior remains correct.
 
 ## Scope intentionally removed
 
@@ -59,6 +59,6 @@ The recommended external split is Vercel for the React/Vite frontend, Render for
 
 Render should create a Node web service from the repository using `render.yaml`, or equivalent dashboard settings. Its build command is `pnpm install --frozen-lockfile && pnpm build`, its start command is `pnpm start`, and its health check is `/healthz`. Configure `NODE_ENV=production`, `JWT_SECRET`, `SUPABASE_DATABASE_URL`, and `FRONTEND_ORIGIN` with the final Vercel production URL. Configure `TELEGRAM_BOT_TOKEN` with the bot token and `TELEGRAM_CHAT_ID` with the destination group ID. Keep both Telegram values server-side in Render; never place them in Vercel frontend variables or source control. Render supplies `PORT` automatically.
 
-Supabase is used as Postgres through Drizzle. The schema is defined in `drizzle/schema.ts`, the generated migration is in `supabase/migrations/`, and Drizzle Kit reads `SUPABASE_DATABASE_URL`. Review the generated SQL before applying it with `pnpm drizzle-kit migrate` from a trusted migration environment. Do not point the migration command at the managed MySQL database or commit connection strings.
+Supabase is used as Postgres through Drizzle. The schema is defined in `drizzle/schema.ts`, and reviewed generated migrations are stored in `supabase/migrations/`. For the external Supabase database, review the migration first and apply one file from a trusted environment with `node scripts/apply-supabase-migration.mjs supabase/migrations/<file>.sql`. Do not commit connection strings.
 
-After both services are deployed, set Vercel `VITE_API_URL` to the Render URL, set Render `FRONTEND_ORIGIN` to the Vercel production URL, redeploy both services, and verify `/healthz`, registration, login, cart checkout, order history, Kitchen Board access, the Completed tab, and a new-order Telegram message in the configured group. Because authentication uses an HTTP-only cross-site cookie in this split deployment, both services must use HTTPS and the Render cookie configuration must remain `SameSite=None; Secure` in production.
+After both services are deployed, set Vercel `VITE_API_URL` to the Render URL, set Render `FRONTEND_ORIGIN` to the Vercel production URL, redeploy both services, and verify `/healthz`, registration, login, pickup and delivery checkout, stored payment method/state, order tracking, Kitchen Board access, finished-order tabs, the Admin dashboard, and a new-order Telegram message in the configured group. Because authentication uses an HTTP-only cross-site cookie in this split deployment, both services must use HTTPS and the Render cookie configuration must remain `SameSite=None; Secure` in production.

@@ -7,6 +7,12 @@ type TelegramOrder = {
   deliveryFeePesewas: number;
   totalPesewas: number;
   customerNote?: string;
+  orderType?: "pickup" | "delivery";
+  paymentMethod?: string;
+  paymentStatus?: string;
+  deliveryPhone?: string;
+  deliveryAddress?: string;
+  deliveryInstructions?: string;
 };
 
 function formatGhs(pesewas: number) {
@@ -18,6 +24,13 @@ export function formatTelegramOrderMessage(order: TelegramOrder) {
     (item) => `• ${item.name} ×${item.quantity} — ${formatGhs(item.lineTotalPesewas)}`,
   );
   const note = order.customerNote?.trim() ? `\nNote: ${order.customerNote.trim()}` : "";
+  const orderType = order.orderType === "delivery" ? "Delivery" : "Pickup";
+  const payment = order.paymentMethod
+    ? `${order.paymentMethod.replaceAll("_", " ")} (${order.paymentStatus ?? "pending"})`
+    : "Not selected";
+  const fulfillment = order.orderType === "delivery"
+    ? [`Phone: ${order.deliveryPhone || "Not provided"}`, `Address: ${order.deliveryAddress || "Not provided"}`, order.deliveryInstructions ? `Instructions: ${order.deliveryInstructions}` : ""].filter(Boolean)
+    : ["Pickup at restaurant"];
 
   return [
     "🍽️ NEW SANDSLY ORDER",
@@ -30,6 +43,9 @@ export function formatTelegramOrderMessage(order: TelegramOrder) {
     `Subtotal: ${formatGhs(order.subtotalPesewas)}`,
     `Delivery: ${formatGhs(order.deliveryFeePesewas)}`,
     `Total: ${formatGhs(order.totalPesewas)}`,
+    `Type: ${orderType}`,
+    `Payment: ${payment}`,
+    ...fulfillment,
     `Status: ${order.status.toUpperCase()}`,
     note,
   ].filter(Boolean).join("\n");
