@@ -7,10 +7,12 @@ Sandsly now runs with its own local email/password authentication and signed coo
 ```bash
 NODE_ENV=development
 SUPABASE_DATABASE_URL=postgresql://postgres:<password>@<host>:5432/postgres
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<server-only-supabase-service-role-key>
 JWT_SECRET=replace-with-a-long-random-secret
 ```
 
-`JWT_SECRET` must be a long, random value in production. Sandsly uses PostgreSQL on Supabase. The Drizzle schema and reviewed migrations create the catalog, users, carts, orders, profiles, roles, payments, and order-status history.
+`JWT_SECRET` must be a long, random value in production. Sandsly uses PostgreSQL on Supabase. The Drizzle schema and reviewed migrations create the catalog, users, carts, orders, profiles, roles, payments, and order-status history. `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are required only when Kitchen/Admin staff upload menu images from a device; keep the service-role key on the API server and out of browser variables.
 
 ## Install and run
 
@@ -35,9 +37,9 @@ The server listens on the `PORT` environment variable when provided and otherwis
 
 Customers register and sign in at `/profile` using email and password. Passwords are hashed with `scrypt`, and sessions are signed with `JWT_SECRET` in an HTTP-only cookie. Kitchen and admin access continues to use the existing database roles. Promote a staff account by updating its `role` to `kitchen` or `admin` through an authorized database administration process.
 
-## External assets
+## External assets and menu uploads
 
-The storefront uses public image URLs for menu photography and a repository-owned SVG brand mark at `client/public/brand-mark.svg`. No Manus storage proxy is required.
+Existing menu photography uses public hosted URLs and the brand mark is a repository-owned SVG at `client/public/brand-mark.svg`. Kitchen/Admin staff can also select a JPEG, PNG, or WebP image from a device (maximum 5 MB) when adding or editing a menu item. The API validates the type and file signature, then persists it in the Supabase Storage `menu-images` bucket. The bucket is created automatically on the first successful upload and only the resulting public object URL is stored with the product. Do not use the Render filesystem for menu uploads because it is ephemeral.
 
 ## Deployment
 
@@ -57,7 +59,7 @@ For the configured verification account, use the credentials supplied to the pro
 
 The recommended external split is Vercel for the React/Vite frontend, Render for the Express/tRPC API, and Supabase for Postgres persistence. Vercel should use the repository root with `vercel.json`; its build command is `pnpm build:client`, output directory is `dist/public`, and `VITE_API_URL` must point to the deployed Render API URL, for example `https://sandsly-api.onrender.com`.
 
-Render should create a Node web service from the repository using `render.yaml`, or equivalent dashboard settings. Its build command is `pnpm install --frozen-lockfile && pnpm build`, its start command is `pnpm start`, and its health check is `/healthz`. Configure `NODE_ENV=production`, `JWT_SECRET`, `SUPABASE_DATABASE_URL`, and `FRONTEND_ORIGIN` with the final Vercel production URL. Configure `TELEGRAM_BOT_TOKEN` with the bot token and `TELEGRAM_CHAT_ID` with the destination group ID. Keep both Telegram values server-side in Render; never place them in Vercel frontend variables or source control. Render supplies `PORT` automatically.
+Render should create a Node web service from the repository using `render.yaml`, or equivalent dashboard settings. Its build command is `pnpm install --frozen-lockfile && pnpm build`, its start command is `pnpm start`, and its health check is `/healthz`. Configure `NODE_ENV=production`, `JWT_SECRET`, `SUPABASE_DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `FRONTEND_ORIGIN` with the final Vercel production URL. Configure `TELEGRAM_BOT_TOKEN` with the bot token and `TELEGRAM_CHAT_ID` with the destination group ID. Keep the Telegram values and Supabase service-role key server-side in Render; never place them in Vercel frontend variables or source control. Render supplies `PORT` automatically.
 
 Supabase is used as Postgres through Drizzle. The schema is defined in `drizzle/schema.ts`, and reviewed generated migrations are stored in `supabase/migrations/`. For the external Supabase database, review the migration first and apply one file from a trusted environment with `node scripts/apply-supabase-migration.mjs supabase/migrations/<file>.sql`. Do not commit connection strings.
 

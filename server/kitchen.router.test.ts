@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 
-const mocks = vi.hoisted(() => ({ listKitchenOrders: vi.fn(), updateKitchenOrderStatus: vi.fn(), listMenuManagementData: vi.fn(), createMenuProduct: vi.fn(), updateMenuProduct: vi.fn(), setMenuProductActive: vi.fn() }));
+const mocks = vi.hoisted(() => ({ listKitchenOrders: vi.fn(), updateKitchenOrderStatus: vi.fn(), listMenuManagementData: vi.fn(), createMenuProduct: vi.fn(), updateMenuProduct: vi.fn(), setMenuProductActive: vi.fn(), uploadMenuImage: vi.fn() }));
 vi.mock("./db", () => ({
   listKitchenOrders: mocks.listKitchenOrders,
   updateKitchenOrderStatus: mocks.updateKitchenOrderStatus,
@@ -12,6 +12,7 @@ vi.mock("./db", () => ({
   listCatalog: vi.fn(), listRecentOrdersForAdmin: vi.fn(), getCartForUser: vi.fn(), addCartItem: vi.fn(),
   setCartItemQuantity: vi.fn(), clearCartForUser: vi.fn(), createOrderFromCart: vi.fn(), getCustomerProfile: vi.fn(), saveCustomerProfile: vi.fn(),
 }));
+vi.mock("./menu-image-storage", () => ({ MenuImageStorageError: class MenuImageStorageError extends Error {}, uploadMenuImage: mocks.uploadMenuImage }));
 
 import { appRouter } from "./routers";
 
@@ -52,5 +53,13 @@ describe("kitchen router", () => {
     expect(mocks.createMenuProduct).toHaveBeenCalledWith(input);
     expect(mocks.updateMenuProduct).toHaveBeenCalledWith(product.id, { name: "Updated Fries" });
     expect(mocks.setMenuProductActive).toHaveBeenCalledWith(product.id, false);
+  });
+
+  it("blocks customer image uploads and stores a validated kitchen image through the server", async () => {
+    const input = { contentType: "image/png" as const, base64: "iVBORw0KGgo=" };
+    mocks.uploadMenuImage.mockResolvedValue({ key: "staff/5/test.png", url: "https://storage.example/menu-images/staff/5/test.png" });
+    await expect(appRouter.createCaller(contextFor("user")).kitchen.uploadImage(input)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(appRouter.createCaller(contextFor("kitchen")).kitchen.uploadImage(input)).resolves.toEqual({ key: "staff/5/test.png", url: "https://storage.example/menu-images/staff/5/test.png" });
+    expect(mocks.uploadMenuImage).toHaveBeenCalledWith({ ...input, userId: 5 });
   });
 });

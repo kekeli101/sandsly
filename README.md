@@ -9,7 +9,7 @@ Sandsly is a mobile-first restaurant ordering platform for **The Crunch Bite**, 
 | Area | Current behavior |
 | --- | --- |
 | Storefront | Responsive Home, searchable Menu, Cart, Profile, Rewards placeholder, and order-tracking routes |
-| Catalog | Boba, Yogurt, Ice Cream, Pizza, Fries, and Pork categories with active products and hosted food imagery |
+| Catalog | Boba, Yogurt, Ice Cream, Pizza, Fries, and Pork categories with active products, hosted food imagery, and staff device-image uploads |
 | Currency | All prices, delivery fees, totals, and notifications use Ghana cedis (`GH₵`) |
 | Customer accounts | Local email/password registration and sign-in with signed HTTP-only sessions |
 | Cart and checkout | Database-backed cart, quantity changes, pickup/delivery selection, delivery validation, notes, payment-method selection, and payment-state records |
@@ -31,6 +31,7 @@ Express 4 + tRPC 11 API on Render
                 v
 Drizzle ORM + PostgreSQL on Supabase
                 |
+                +--> Supabase Storage for staff-uploaded menu images
                 +--> Telegram Bot API for new-order notifications
 ```
 
@@ -90,6 +91,8 @@ SUPABASE_DATABASE_URL=postgresql://postgres:<password>@<host>:5432/postgres
 FRONTEND_ORIGIN=http://localhost:3000
 TELEGRAM_BOT_TOKEN=<optional-bot-token>
 TELEGRAM_CHAT_ID=<optional-group-chat-id>
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<server-only-service-role-key-for-menu-image-uploads>
 VITE_API_URL=
 ```
 
@@ -136,7 +139,7 @@ Delivery: Pending → Accepted → Preparing → Ready → Out for Delivery → 
 
 The board polls every five seconds and refreshes when the browser regains focus. Finished orders are read-only. Status validation and immutable status-history writes are enforced in the API rather than only in the UI.
 
-The same staff console now includes **Manage menu**. Kitchen/Admin users can add a product, edit its category, name, description, Ghana Cedi price, image URL, badge, crunch level, and sort order, and remove or restore products from the customer-facing menu. Removal is implemented as a soft deactivation so existing order history keeps its product snapshots. Customer catalog reads exclude inactive products, and catalog caches are invalidated after staff changes with a short freshness window for other storefront sessions.
+The same staff console now includes **Manage menu**. Kitchen/Admin users can add a product, edit its category, name, description, Ghana Cedi price, badge, crunch level, and sort order, and remove or restore products from the customer-facing menu. Menu photography is selected from the staff member’s device rather than entered as a URL. The API accepts only JPEG, PNG, and WebP files up to 5 MB, validates their file signatures, uploads them to the Supabase Storage `menu-images` bucket, and stores the resulting public object URL on the product. Upload access is restricted to Kitchen/Admin server procedures; the Supabase service-role key never reaches the browser. Removal is implemented as a soft deactivation so existing order history keeps its product snapshots. Customer catalog reads exclude inactive products, and catalog caches are invalidated after staff changes with a short freshness window for other storefront sessions.
 
 ## Telegram order notifications
 
@@ -176,6 +179,8 @@ Configure the following Render environment variables:
 NODE_ENV=production
 JWT_SECRET=<long-random-session-secret>
 SUPABASE_DATABASE_URL=<Supabase PostgreSQL connection string>
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<server-only-key-for-menu-image-storage>
 FRONTEND_ORIGIN=https://sandsly.vercel.app
 TELEGRAM_BOT_TOKEN=<Telegram bot token>
 TELEGRAM_CHAT_ID=<Telegram group ID>
@@ -204,7 +209,8 @@ After deployment, verify the following in order:
 5. Test both pickup and delivery checkout, including delivery contact/address validation and the stored payment method/state.
 6. The order transitions through the correct pickup or delivery workflow and appears read-only when finished.
 7. The customer Profile renders order status history, item details, fulfillment type, and payment state.
-8. The Telegram group receives the order number, items, total, fulfillment type, payment state, and required delivery details.
+8. Kitchen/Admin staff can select a JPEG, PNG, or WebP image from their device in **Manage menu**, save the item, and see the image in the customer catalog.
+9. The Telegram group receives the order number, items, total, fulfillment type, payment state, and required delivery details.
 
 See [`STANDALONE_SETUP.md`](./STANDALONE_SETUP.md) for migration and deployment details already used for the external release.
 
@@ -221,7 +227,7 @@ See [`STANDALONE_SETUP.md`](./STANDALONE_SETUP.md) for migration and deployment 
 | `node scripts/seed-supabase.mjs` | Apply the idempotent catalog seed |
 | `node scripts/apply-supabase-migration.mjs supabase/migrations/<file>.sql` | Apply one reviewed migration to the external Supabase database |
 
-The automated suite covers authentication logout, role access, customer catalog visibility, pickup and delivery kitchen transitions, storefront checkout, Supabase connectivity, Telegram credentials, and Telegram message formatting/delivery. The current suite contains 17 passing tests across ten test files.
+The automated suite covers authentication logout, role access, customer catalog visibility, pickup and delivery kitchen transitions, storefront checkout, Supabase database and Storage connectivity, Kitchen-only menu image uploads and image-type validation, Telegram credentials, and Telegram message formatting/delivery.
 
 ## Performance practices
 
