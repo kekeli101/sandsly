@@ -15,11 +15,12 @@ import {
 } from "../drizzle/schema";
 import { calculateOrderTotals } from "./storefront-utils";
 import { isValidKitchenTransition } from "./kitchen-utils";
+import { filterCustomerCatalogProducts } from "./catalog-utils";
 
 const DELIVERY_FEE_PESEWAS = 2000;
 let _db: ReturnType<typeof drizzle> | null = null;
 let _client: ReturnType<typeof postgres> | null = null;
-const CATALOG_CACHE_TTL_MS = 5 * 60_000;
+const CATALOG_CACHE_TTL_MS = 30_000;
 type CatalogResult = {
   categories: Array<{ id: number; slug: string; name: string; sortOrder: number }>;
   products: Array<{ id: string; name: string; description: string; pricePesewas: number; imageUrl: string; badge: string | null; crunchLevel: number; categorySlug: string; categoryName: string; sortOrder: number }>;
@@ -120,19 +121,68 @@ export async function listCatalog(): Promise<CatalogResult> {
   if (catalogCache && catalogCache.expiresAt > Date.now()) return catalogCache.value;
   const db = await requireDb();
   const [categoryRows, productRows] = await Promise.all([
-    db.select({ id: categories.id, slug: categories.slug, name: categories.name, sortOrder: categories.sortOrder })
+    db.select({ id: categories.id, slug: categories.slug, name: categories.name, sortOrder: categories.sortOrder, isActive: categories.isActive })
       .from(categories).where(eq(categories.isActive, true)).orderBy(categories.sortOrder),
     db.select({
       id: products.id, name: products.name, description: products.description, pricePesewas: products.pricePesewas,
       imageUrl: products.imageUrl, badge: products.badge, crunchLevel: products.crunchLevel,
       categorySlug: categories.slug, categoryName: categories.name, sortOrder: products.sortOrder,
+      productIsActive: products.isActive, categoryIsActive: categories.isActive,
     }).from(products).innerJoin(categories, eq(products.categoryId, categories.id))
       .where(and(eq(products.isActive, true), eq(categories.isActive, true)))
       .orderBy(categories.sortOrder, products.sortOrder),
   ]);
-  const value = { categories: categoryRows, products: productRows };
+  const value = {
+    categories: categoryRows.filter((category) => category.isActive).map(({ isActive: _isActive, ...category }) => category),
+    products: filterCustomerCatalogProducts(productRows.map(({ productIsActive, categoryIsActive, ...product }) => ({ product, productIsActive, categoryIsActive }))),
+  };
   catalogCache = { value, expiresAt: Date.now() + CATALOG_CACHE_TTL_MS };
   return value;
+}
+
+function invalidateCatalogCache() {
+  catalogCache = null;
+}
+
+export async function listMenuManagementData() {
+  const db = await requireDb();
+  const [categoryRows, productRows] = await Promise.all([
+    db.select({ id: categories.id, slug: categories.slug, name: categories.name, sortOrder: categories.sortOrder })
+      .from(categories).where(eq(categories.isActive, true)).orderBy(categories.sortOrder),
+    db.select({
+      id: products.id, categoryId: products.categoryId, name: products.name, description: products.description,
+      pricePesewas: products.pricePesewas, imageUrl: products.imageUrl, badge: products.badge,
+      crunchLevel: products.crunchLevel, sortOrder: products.sortOrder, isActive: products.isActive,
+      categoryName: categories.name,
+    }).from(products).innerJoin(categories, eq(products.categoryId, categories.id))
+      .orderBy(categories.sortOrder, products.sortOrder, products.name),
+  ]);
+  return { categories: categoryRows, products: productRows };
+}
+
+export async function createMenuProduct(input: {
+  id: string; categoryId: number; name: string; description: string; pricePesewas: number;
+  imageUrl: string; badge?: string | null; crunchLevel: number; sortOrder: number;
+}) {
+  const db = await requireDb();
+  const [created] = await db.insert(products).values({ ...input, badge: input.badge || null }).returning();
+  invalidateCatalogCache();
+  return created;
+}
+
+export async function updateMenuProduct(productId: string, input: Partial<{
+  categoryId: number; name: string; description: string; pricePesewas: number; imageUrl: string;
+  badge: string | null; crunchLevel: number; sortOrder: number; isActive: boolean;
+}>) {
+  const db = await requireDb();
+  const [updated] = await db.update(products).set({ ...input, updatedAt: new Date() }).where(eq(products.id, productId)).returning();
+  if (!updated) throw new Error("Menu item not found");
+  invalidateCatalogCache();
+  return updated;
+}
+
+export async function setMenuProductActive(productId: string, isActive: boolean) {
+  return updateMenuProduct(productId, { isActive });
 }
 
 async function getOrCreateCart(userId: number) {

@@ -8,7 +8,7 @@ import { trpc } from "@/lib/trpc";
 
 export default function Home() {
   const [, setLocation] = useLocation();
-  const catalogQuery = trpc.catalog.list.useQuery(undefined, { staleTime: 5 * 60_000, gcTime: 30 * 60_000, refetchOnWindowFocus: false, retry: 1 });
+  const catalogQuery = trpc.catalog.list.useQuery(undefined, { staleTime: 30_000, gcTime: 10 * 60_000, refetchOnWindowFocus: false, retry: 1 });
   const catalog = catalogQuery.data ?? fallbackCatalog;
   const products = catalog.products;
   const categories = catalog.categories;

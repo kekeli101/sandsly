@@ -65,3 +65,10 @@
 - [x] Verify performance improvements with build, tests, responsive screenshots, and runtime checks.
 - [x] Configure future Sandsly Git commits and pushes to use the connected user's GitHub identity where supported, without rewriting existing history.
 - [x] Audit the current implementation and rewrite README.md with accurate standalone setup, deployment, integrations, testing, performance, and GitHub workflow documentation.
+- [x] Add Kitchen/Admin-only menu management for creating, editing, availability toggling, and deactivating products.
+- [x] Add menu-management API and UI tests, then verify customer catalog visibility and staff authorization.
+- [x] Add authenticated UI verification for the Kitchen Dashboard Manage menu section and its create/edit/remove/restore flows.
+- [x] Add regression coverage proving inactive products stay hidden from the customer catalog and restored products reappear.
+- [x] Add visible success and error feedback for menu-management mutations.
+- [x] Interactively verify the Kitchen Dashboard create, edit, remove, and restore controls under a staff session.
+- [x] Add durable automated regression coverage for active and inactive customer catalog visibility.

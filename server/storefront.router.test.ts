@@ -12,9 +12,11 @@ const mocks = vi.hoisted(() => ({
   listRecentOrdersForAdmin: vi.fn(),
   saveCustomerProfile: vi.fn(),
   setCartItemQuantity: vi.fn(),
+  notifyTelegramNewOrder: vi.fn(),
 }));
 
 vi.mock("./db", () => mocks);
+vi.mock("./telegram", () => ({ notifyTelegramNewOrder: mocks.notifyTelegramNewOrder }));
 
 import { appRouter } from "./routers";
 
@@ -41,6 +43,7 @@ describe("storefront protected procedures", () => {
     vi.clearAllMocks();
     mocks.addCartItem.mockResolvedValue({ items: [] });
     mocks.createOrderFromCart.mockResolvedValue({ orderNumber: "CB-12345678-321", status: "pending", subtotalPesewas: 7500, deliveryFeePesewas: 2000, totalPesewas: 9500 });
+    mocks.notifyTelegramNewOrder.mockResolvedValue({ delivered: true });
   });
 
   it("adds items and creates an order for the authenticated customer only", async () => {

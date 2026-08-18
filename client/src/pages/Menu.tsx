@@ -15,7 +15,7 @@ function getRequestedCategory(location: string) {
 export default function Menu() {
   const [location, setLocation] = useLocation();
   const { itemCount } = useCart();
-  const catalogQuery = trpc.catalog.list.useQuery(undefined, { staleTime: 5 * 60_000, gcTime: 30 * 60_000, refetchOnWindowFocus: false, retry: 1 });
+  const catalogQuery = trpc.catalog.list.useQuery(undefined, { staleTime: 30_000, gcTime: 10 * 60_000, refetchOnWindowFocus: false, retry: 1 });
   const catalog = catalogQuery.data ?? fallbackCatalog;
   const categories = catalog.categories;
   const [selected, setSelected] = useState(() => getRequestedCategory(location));

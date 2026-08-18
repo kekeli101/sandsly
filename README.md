@@ -129,6 +129,8 @@ Pending → Accepted → Preparing → Ready → Completed
 
 The board polls every five seconds and refreshes when the browser regains focus. Completed orders are read-only. Status validation is enforced in the API rather than only in the UI.
 
+The same staff console now includes **Manage menu**. Kitchen/Admin users can add a product, edit its category, name, description, Ghana Cedi price, image URL, badge, crunch level, and sort order, and remove or restore products from the customer-facing menu. Removal is implemented as a soft deactivation so existing order history keeps its product snapshots. Customer catalog reads exclude inactive products, and catalog caches are invalidated after staff changes with a short freshness window for other storefront sessions.
+
 ## Telegram order notifications
 
 After a successful checkout, the API formats a message containing the order number, customer name, line items, quantities, subtotal, delivery fee, total, status, and optional customer note. It sends the message to the configured group through Telegram’s `sendMessage` endpoint.
