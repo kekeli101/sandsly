@@ -103,4 +103,6 @@
 - [x] Prepare a client-ready progress report covering delivered capabilities, validation status, and prioritized future improvements.
 - [x] Diagnose slow cart quantity and removal actions.
 - [x] Implement optimistic cart editing with safe rollback and final server reconciliation.
-- [ ] Verify fast repeated quantity updates, removal, totals, and failure recovery in the live cart.
+- [x] Verify fast repeated quantity updates, removal, totals, and failure recovery in the live cart.
+- [x] Exercise a verifiable cart-edit failure path and confirm visible error feedback, prior-state rollback, and reconciliation behavior.
+- [x] Perform a successful cart edit after the simulated failure and confirm the server-backed cart remains usable and correctly reconciled.
