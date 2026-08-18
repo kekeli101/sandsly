@@ -75,3 +75,11 @@
 - [x] Audit the supplied restaurant SRS against Sandsly and document prioritized implementation gaps.
 - [x] Implement the selected SRS-aligned customer, operational, and administrative workflows.
 - [x] Add end-to-end tests and update documentation for the SRS-aligned release.
+- [ ] Add accessible show/hide controls to local account password fields.
+- [ ] Add a secure non-enumerating forgot-password request flow and document its delivery requirement.
+- [ ] Validate the password visibility and recovery-request experience with automated tests and responsive review.
+- [x] Remove mobile bottom-bar navigation and keep primary navigation in the side menu.
+- [x] Add a dedicated Rewards coming-soon route reachable from the side menu.
+- [x] Verify the mobile side-menu navigation and Rewards coming-soon route at a phone viewport.
+- [x] Interactively verify the mobile three-line side menu opens, closes, and navigates to each primary route at a phone viewport.
+- [x] Record the user-confirmed mobile drawer check in a verification note and remove the unreliable temporary automation script.

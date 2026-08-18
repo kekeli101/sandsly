@@ -122,6 +122,8 @@ Public registration creates customer accounts with the `user` role. Provision ki
 
 The canonical staff account used in verification is `kitchen@mail.com`. Rotate its password before production use and never store credentials in source control.
 
+Email-based password recovery is intentionally deferred until Sandsly has a verified transactional email sender and a production From address. A future reset flow must send single-use, expiring links and return the same confirmation response whether or not an account exists for the requested email.
+
 ## Kitchen Board
 
 The Kitchen Board is available at `/kitchen` to authenticated Kitchen and Admin accounts. It separates orders into **Active** and **Completed** tabs. Active orders can move through the valid workflow:
