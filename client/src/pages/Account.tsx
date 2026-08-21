@@ -6,6 +6,7 @@ import {
   ChefHat,
   CheckCircle2,
   CreditCard,
+  ClipboardList,
   KeyRound,
   LogIn,
   LogOut,
@@ -48,6 +49,7 @@ export default function Account() {
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [defaultAddress, setDefaultAddress] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const kitchenAccess = getKitchenProfileAccess(user?.role);
 
   const completeAuth = async () => {
@@ -69,8 +71,8 @@ export default function Account() {
   });
   const saveMutation = trpc.storefront.saveProfile.useMutation({
     onSuccess: async () => {
-      await utils.storefront.profile.invalidate();
-      toast.success("Profile saved");
+      await Promise.all([utils.storefront.profile.invalidate(), utils.auth.me.invalidate()]);
+      toast.success("Account details saved");
     },
     onError: error => toast.error("Couldn’t save profile", { description: error.message }),
   });
@@ -79,6 +81,10 @@ export default function Account() {
     setPhone(profileQuery.data?.phone ?? "");
     setDefaultAddress(profileQuery.data?.defaultAddress ?? "");
   }, [profileQuery.data]);
+
+  useEffect(() => {
+    setDisplayName(user?.name ?? "");
+  }, [user?.id]);
 
   if (!isAuthenticated) {
     return (
@@ -153,27 +159,31 @@ export default function Account() {
 
         <section className="mt-8 rounded-[15px] border border-[#48413e] bg-[#242424] p-5 shadow-[3px_3px_0_#050505]">
           <div className="flex items-center gap-2">
-            <MapPin size={17} className="text-[#ff5a1f]" />
-            <h2 className="font-display text-[1.1rem] font-black uppercase tracking-[-0.03em]">Delivery details</h2>
+            <UserRound size={17} className="text-[#ff5a1f]" />
+            <h2 className="font-display text-[1.1rem] font-black uppercase tracking-[-0.03em]">Account details</h2>
           </div>
+          <p className="mt-2 text-sm leading-6 text-[#bdb2ac]">Keep your name and delivery contact details ready for a faster checkout.</p>
           <div className="mt-5 grid gap-4">
+            <Label label="Name"><input value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="Your name" autoComplete="name" /></Label>
+            <Label label="Account email"><input value={user?.email ?? ""} readOnly aria-readonly="true" className="cursor-not-allowed opacity-65" autoComplete="email" /></Label>
             <Label label="Phone"><input value={phone} onChange={event => setPhone(event.target.value)} placeholder="e.g. 024 000 0000" /></Label>
             <Label label="Default delivery address"><textarea value={defaultAddress} onChange={event => setDefaultAddress(event.target.value)} placeholder="Add your delivery address" rows={3} /></Label>
-            <button type="button" disabled={saveMutation.isPending} onClick={() => saveMutation.mutate({ phone, defaultAddress })} className="flex h-11 items-center justify-center gap-2 rounded-[10px] bg-[#ff5a1f] text-xs font-black uppercase tracking-[0.14em] text-[#111111] shadow-[3px_3px_0_#050505] disabled:opacity-60">
-              <Save size={16} /> {saveMutation.isPending ? "Saving…" : "Save details"}
+            <p className="-mt-1 text-xs leading-5 text-[#8e827b]">Your email is your sign-in identity. Contact the restaurant if it needs to be changed.</p>
+            <button type="button" disabled={saveMutation.isPending || !displayName.trim()} onClick={() => saveMutation.mutate({ displayName, phone, defaultAddress })} className="flex h-11 items-center justify-center gap-2 rounded-[10px] bg-[#ff5a1f] text-xs font-black uppercase tracking-[0.14em] text-[#111111] shadow-[3px_3px_0_#050505] disabled:opacity-60">
+              <Save size={16} /> {saveMutation.isPending ? "Saving…" : "Save account details"}
             </button>
           </div>
         </section>
 
         <section className="mt-8">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2"><PackageCheck size={17} className="text-[#ff5a1f]" /><h2 className="font-display text-[1.15rem] font-black uppercase tracking-[-0.03em]">Order tracking</h2></div>
-            <span className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8e827b]">Auto refreshes</span>
+            <div className="flex items-center gap-2"><ClipboardList size={17} className="text-[#ff5a1f]" /><h2 className="font-display text-[1.15rem] font-black uppercase tracking-[-0.03em]">Order history</h2></div>
+            <span className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8e827b]">{ordersQuery.data?.length ?? 0} order{(ordersQuery.data?.length ?? 0) === 1 ? "" : "s"} · auto refreshes</span>
           </div>
           {ordersQuery.isLoading ? (
             <div className="mt-4 h-28 animate-pulse rounded-[15px] bg-[#242424]" />
           ) : (ordersQuery.data?.length ?? 0) === 0 ? (
-            <div className="mt-4 rounded-[15px] border border-[#393432] bg-[#242424] p-6 text-sm leading-6 text-[#bdb2ac]">Your orders and live preparation updates will appear here.</div>
+            <div className="mt-4 rounded-[15px] border border-[#393432] bg-[#242424] p-6 text-sm leading-6 text-[#bdb2ac]">Your completed and active orders, payment choices, item details, and live preparation updates will appear here.</div>
           ) : (
             <div className="mt-4 space-y-4">{ordersQuery.data?.map(order => <OrderCard key={order.id} order={order} />)}</div>
           )}

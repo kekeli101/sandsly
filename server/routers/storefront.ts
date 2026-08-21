@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { addCartItem, clearCartForUser, createOrderFromCart, getCartForUser, getCustomerProfile, listOrdersForUser, saveCustomerProfile, setCartItemQuantity } from "../db";
+import { addCartItem, clearCartForUser, createOrderFromCart, getCartForUser, getCustomerProfile, listOrdersForUser, saveCustomerAccountDetails, setCartItemQuantity } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
 import { notifyTelegramNewOrder } from "../telegram";
 import { orderTypeValues, paymentMethodValues } from "../../drizzle/schema";
@@ -31,6 +31,6 @@ export const storefrontRouter = router({
     }),
   orders: protectedProcedure.query(({ ctx }) => listOrdersForUser(ctx.user.id)),
   profile: protectedProcedure.query(({ ctx }) => getCustomerProfile(ctx.user.id)),
-  saveProfile: protectedProcedure.input(z.object({ phone: z.string().trim().max(32).optional(), defaultAddress: z.string().trim().max(500).optional() }))
-    .mutation(({ ctx, input }) => saveCustomerProfile(ctx.user.id, input.phone, input.defaultAddress)),
+  saveProfile: protectedProcedure.input(z.object({ displayName: z.string().trim().min(1).max(80), phone: z.string().trim().max(32).optional(), defaultAddress: z.string().trim().max(500).optional() }))
+    .mutation(({ ctx, input }) => saveCustomerAccountDetails(ctx.user.id, input)),
 });

@@ -112,3 +112,6 @@
 - [x] Exclude invalidated or redeemed reset tokens from the request cooldown so a delivery failure can be retried immediately.
 - [x] Add automated regression coverage for password visibility controls and the generic forgot-password and reset-password screen behavior.
 - [x] Add rendered component interaction tests for password visibility, recovery confirmation, and password-match validation before releasing the account experience.
+- [x] Expand the signed-in customer profile with editable account details and clear saved-state feedback.
+- [x] Present customer order history with readable fulfillment, payment, item, and status information.
+- [x] Add secure profile-update and order-history regression coverage, including responsive profile review.

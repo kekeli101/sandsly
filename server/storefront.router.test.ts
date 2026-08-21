@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   listCatalog: vi.fn(),
   listOrdersForUser: vi.fn(),
   listRecentOrdersForAdmin: vi.fn(),
-  saveCustomerProfile: vi.fn(),
+  saveCustomerAccountDetails: vi.fn(),
   setCartItemQuantity: vi.fn(),
   notifyTelegramNewOrder: vi.fn(),
 }));
@@ -54,5 +54,14 @@ describe("storefront protected procedures", () => {
     expect(mocks.addCartItem).toHaveBeenCalledWith(42, "matcha-cloud-boba", 2);
     expect(mocks.createOrderFromCart).toHaveBeenCalledWith(42, { customerNote: "Less ice", orderType: "pickup", paymentMethod: "cash_on_pickup" });
     expect(order).toMatchObject({ orderNumber: "CB-12345678-321", totalPesewas: 9500 });
+  });
+
+  it("updates only the signed-in customer’s display and delivery details", async () => {
+    mocks.saveCustomerAccountDetails.mockResolvedValue({ displayName: "Ama Mensah", phone: "024 000 0000", defaultAddress: "Osu, Accra" });
+    const caller = appRouter.createCaller(createCustomerContext());
+    const profile = await caller.storefront.saveProfile({ displayName: "Ama Mensah", phone: "024 000 0000", defaultAddress: "Osu, Accra" });
+
+    expect(mocks.saveCustomerAccountDetails).toHaveBeenCalledWith(42, { displayName: "Ama Mensah", phone: "024 000 0000", defaultAddress: "Osu, Accra" });
+    expect(profile).toMatchObject({ displayName: "Ama Mensah", defaultAddress: "Osu, Accra" });
   });
 });

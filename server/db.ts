@@ -342,6 +342,19 @@ export async function saveCustomerProfile(userId: number, phone?: string, defaul
   return getCustomerProfile(userId);
 }
 
+export async function saveCustomerAccountDetails(userId: number, input: { displayName: string; phone?: string; defaultAddress?: string }) {
+  const db = await requireDb();
+  const displayName = input.displayName.trim();
+  const phone = input.phone?.trim() || null;
+  const defaultAddress = input.defaultAddress?.trim() || null;
+  return db.transaction(async (tx) => {
+    await tx.update(users).set({ name: displayName, updatedAt: new Date() }).where(eq(users.id, userId));
+    await tx.insert(customerProfiles).values({ userId, phone, defaultAddress })
+      .onConflictDoUpdate({ target: customerProfiles.userId, set: { phone, defaultAddress, updatedAt: new Date() } });
+    return { displayName, phone, defaultAddress };
+  });
+}
+
 export async function listRecentOrdersForAdmin() {
   const db = await requireDb();
   return db.select({ id: orders.id, orderNumber: orders.orderNumber, status: orders.status, orderType: orders.orderType, totalPesewas: orders.totalPesewas, createdAt: orders.createdAt, customerName: users.name, paymentMethod: payments.method, paymentStatus: payments.status })
