@@ -18,6 +18,16 @@ export const users = pgTable("users", {
   lastSignedIn: timestamp("lastSignedIn", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [uniqueIndex("users_email_lower_unique").on(sql`lower(${table.email})`)]);
 
+/** Password-reset secrets are stored only as hashes and become unusable after expiry or redemption. */
+export const passwordResetTokens = pgTable("passwordResetTokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: varchar("tokenHash", { length: 64 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt", { withTimezone: true }).notNull(),
+  usedAt: timestamp("usedAt", { withTimezone: true }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("password_reset_tokens_user_created_idx").on(table.userId, table.createdAt)]);
+
 export const customerProfiles = pgTable("customerProfiles", {
   id: serial("id").primaryKey(),
   userId: integer("userId").notNull().references(() => users.id),

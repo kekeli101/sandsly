@@ -11,7 +11,7 @@ Sandsly is a mobile-first restaurant ordering platform for **The Crunch Bite**, 
 | Storefront | Responsive Home, searchable Menu, Cart, Profile, Rewards placeholder, and order-tracking routes |
 | Catalog | Boba, Yogurt, Ice Cream, Pizza, Fries, and Pork categories with active products, hosted food imagery, and staff device-image uploads |
 | Currency | All prices, delivery fees, totals, and notifications use Ghana cedis (`GH₵`) |
-| Customer accounts | Local email/password registration and sign-in with signed HTTP-only sessions |
+| Customer accounts | Local email/password registration, accessible show/hide controls, signed HTTP-only sessions, and a non-enumerating recovery request flow |
 | Cart and checkout | Database-backed cart, quantity changes, pickup/delivery selection, delivery validation, notes, payment-method selection, and payment-state records |
 | Customer tracking | Live-refreshing Profile order cards with item details, payment state, fulfillment type, and a status timeline |
 | Kitchen Board | Kitchen/Admin-only access with Active and Finished tabs, pickup/delivery-aware status transitions, payment context, delivery details, and five-second polling |
@@ -93,6 +93,9 @@ TELEGRAM_BOT_TOKEN=<optional-bot-token>
 TELEGRAM_CHAT_ID=<optional-group-chat-id>
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<server-only-service-role-key-for-menu-image-uploads>
+RESEND_API_KEY=<server-only-resend-api-key>
+RESEND_FROM_EMAIL=<authorized-resend-sender>
+PASSWORD_RESET_TEST_RECIPIENT=<testing-only-recipient>
 VITE_API_URL=
 ```
 
@@ -125,7 +128,9 @@ Public registration creates customer accounts with the `user` role. Provision ki
 
 The canonical staff account used in verification is `kitchen@mail.com`. Rotate its password before production use and never store credentials in source control.
 
-Email-based password recovery is intentionally deferred until Sandsly has a verified transactional email sender and a production From address. A future reset flow must send single-use, expiring links and return the same confirmation response whether or not an account exists for the requested email.
+The Profile sign-in screen provides an accessible show/hide password control and a recovery-request flow. Reset secrets are 256-bit random values stored only as SHA-256 hashes in `passwordResetTokens`; links expire after 30 minutes, are single-use, and successful resets start a new signed session. The request always returns the same acknowledgement for known and unknown addresses, includes a short per-account cooldown, and invalidates a token if message delivery fails.
+
+> **Current email-delivery limitation:** Sandsly is using Resend’s restricted onboarding sender while no custom sending domain is verified. Recovery emails are therefore deliberately limited to `PASSWORD_RESET_TEST_RECIPIENT`; all other requests receive the same generic acknowledgement but do not generate a usable token. Do not describe this as public customer recovery. To enable production customer delivery, verify a controlled domain in Resend, replace `RESEND_FROM_EMAIL` with an address on that domain, and re-run `server/resend.credentials.test.ts`.
 
 ## Kitchen Board
 
@@ -184,6 +189,9 @@ SUPABASE_SERVICE_ROLE_KEY=<server-only-key-for-menu-image-storage>
 FRONTEND_ORIGIN=https://sandsly.vercel.app
 TELEGRAM_BOT_TOKEN=<Telegram bot token>
 TELEGRAM_CHAT_ID=<Telegram group ID>
+RESEND_API_KEY=<Resend API key>
+RESEND_FROM_EMAIL=onboarding@resend.dev
+PASSWORD_RESET_TEST_RECIPIENT=<verified testing inbox>
 ```
 
 Render supplies `PORT` automatically. Do not hardcode a port. The API must run over HTTPS in production because the session cookie uses cross-site `SameSite=None; Secure` behavior for the Vercel-to-Render split.
@@ -227,7 +235,7 @@ See [`STANDALONE_SETUP.md`](./STANDALONE_SETUP.md) for migration and deployment 
 | `node scripts/seed-supabase.mjs` | Apply the idempotent catalog seed |
 | `node scripts/apply-supabase-migration.mjs supabase/migrations/<file>.sql` | Apply one reviewed migration to the external Supabase database |
 
-The automated suite covers authentication logout, role access, customer catalog visibility, pickup and delivery kitchen transitions, storefront checkout, Supabase database and Storage connectivity, Kitchen-only menu image uploads and image-type validation, Telegram credentials, and Telegram message formatting/delivery.
+The automated suite covers authentication logout, password-reset token and recovery behavior, Resend credential/configuration checks, role access, customer catalog visibility, pickup and delivery kitchen transitions, storefront checkout, Supabase database and Storage connectivity, Kitchen-only menu image uploads and image-type validation, Telegram credentials, and Telegram message formatting/delivery.
 
 ## Performance practices
 
@@ -270,4 +278,5 @@ The repository contains supporting records for the completed release:
 - [`verification-expanded-menu.md`](./verification-expanded-menu.md) records expanded catalog and image verification.
 - [`verification-telegram.md`](./verification-telegram.md) records deployed Telegram order-notification verification.
 - [`verification-performance.md`](./verification-performance.md) records measured baseline and optimization results.
+- [`verification-password-recovery.md`](./verification-password-recovery.md) records account-password and recovery interface verification.
 - [`todo.md`](./todo.md) preserves the implementation and verification history.

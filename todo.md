@@ -75,9 +75,9 @@
 - [x] Audit the supplied restaurant SRS against Sandsly and document prioritized implementation gaps.
 - [x] Implement the selected SRS-aligned customer, operational, and administrative workflows.
 - [x] Add end-to-end tests and update documentation for the SRS-aligned release.
-- [ ] Add accessible show/hide controls to local account password fields.
-- [ ] Add a secure non-enumerating forgot-password request flow and document its delivery requirement.
-- [ ] Validate the password visibility and recovery-request experience with automated tests and responsive review.
+- [x] Add accessible show/hide controls to local account password fields.
+- [x] Add a secure non-enumerating forgot-password request flow and document its delivery requirement.
+- [x] Validate the password visibility and recovery-request experience with automated tests and responsive review.
 - [x] Remove mobile bottom-bar navigation and keep primary navigation in the side menu.
 - [x] Add a dedicated Rewards coming-soon route reachable from the side menu.
 - [x] Verify the mobile side-menu navigation and Rewards coming-soon route at a phone viewport.
@@ -106,3 +106,9 @@
 - [x] Verify fast repeated quantity updates, removal, totals, and failure recovery in the live cart.
 - [x] Exercise a verifiable cart-edit failure path and confirm visible error feedback, prior-state rollback, and reconciliation behavior.
 - [x] Perform a successful cart edit after the simulated failure and confirm the server-backed cart remains usable and correctly reconciled.
+- [x] Select and configure a transactional email delivery provider for password-reset messages without exposing credentials in client code.
+- [x] Add a rate-limited, expiring reset-token delivery and password-reset completion flow after the recovery-request experience is in place.
+- [x] Restrict reset-email delivery to the verified testing recipient until a public Resend sending domain is configured.
+- [x] Exclude invalidated or redeemed reset tokens from the request cooldown so a delivery failure can be retried immediately.
+- [x] Add automated regression coverage for password visibility controls and the generic forgot-password and reset-password screen behavior.
+- [x] Add rendered component interaction tests for password visibility, recovery confirmation, and password-match validation before releasing the account experience.

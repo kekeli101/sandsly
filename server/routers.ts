@@ -13,6 +13,8 @@ export const appRouter = router({
     logout: standaloneAuthRouter.logout,
     register: standaloneAuthRouter.register,
     login: standaloneAuthRouter.login,
+    requestPasswordReset: standaloneAuthRouter.requestPasswordReset,
+    resetPassword: standaloneAuthRouter.resetPassword,
   }),
   catalog: catalogRouter,
   kitchen: kitchenRouter,
