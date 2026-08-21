@@ -115,3 +115,11 @@
 - [x] Expand the signed-in customer profile with editable account details and clear saved-state feedback.
 - [x] Present customer order history with readable fulfillment, payment, item, and status information.
 - [x] Add secure profile-update and order-history regression coverage, including responsive profile review.
+- [x] Define a Paystack-backed online-payment flow that preserves existing pickup and delivery order rules.
+- [x] Add server-only Paystack initialization, payment-reference verification, and idempotent payment-status persistence.
+- [x] Add Paystack payment selection, hosted-checkout return handling, and customer payment feedback in the storefront.
+- [x] Validate Paystack success, cancellation, verification failure, and duplicate-verification safeguards with automated tests.
+- [x] Confirm the configured Paystack key is a test credential and block live-mode checkout until a future deliberate launch approval.
+- [x] Keep card and Mobile Money orders out of the Kitchen workflow until Paystack verification records a successful payment.
+- [x] Give customers a safe retry path when a pending online-payment order cannot initialize its Paystack checkout link.
+- [x] Defer Telegram notification for online orders until Paystack records a successful payment.

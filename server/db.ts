@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
+import { or } from "drizzle-orm";
 import postgres from "postgres";
 import {
   cartItems,
@@ -285,6 +286,7 @@ export async function createOrderFromCart(userId: number, input: CheckoutInput) 
     })));
     await tx.delete(cartItems).where(eq(cartItems.cartId, cart.id));
     return {
+      id: created.id,
       orderNumber,
       status: "pending" as const,
       orderType: input.orderType,
@@ -303,6 +305,74 @@ export async function createOrderFromCart(userId: number, input: CheckoutInput) 
       deliveryInstructions: input.orderType === "delivery" ? input.deliveryInstructions?.trim() || undefined : undefined,
     };
   });
+}
+
+export async function attachPaystackReference(orderId: number, reference: string) {
+  const db = await requireDb();
+  const [payment] = await db.update(payments).set({ providerReference: reference, updatedAt: new Date() })
+    .where(and(eq(payments.orderId, orderId), eq(payments.status, "pending"))).returning();
+  if (!payment) throw new Error("This order is not eligible for Paystack checkout");
+  return payment;
+}
+
+export async function getPaystackPaymentForUser(userId: number, reference: string) {
+  const db = await requireDb();
+  return (await db.select({
+    paymentId: payments.id, orderId: orders.id, orderNumber: orders.orderNumber, amountPesewas: payments.amountPesewas,
+    status: payments.status, method: payments.method, reference: payments.providerReference,
+  }).from(payments).innerJoin(orders, eq(payments.orderId, orders.id))
+    .where(and(eq(orders.userId, userId), eq(payments.providerReference, reference))).limit(1))[0];
+}
+
+export async function getPendingOnlinePaymentForUser(userId: number, orderId: number) {
+  const db = await requireDb();
+  return (await db.select({
+    paymentId: payments.id, orderId: orders.id, orderNumber: orders.orderNumber, amountPesewas: payments.amountPesewas,
+    status: payments.status, method: payments.method,
+  }).from(payments).innerJoin(orders, eq(payments.orderId, orders.id))
+    .where(and(eq(orders.userId, userId), eq(orders.id, orderId), eq(payments.status, "pending"), inArray(payments.method, ["mobile_money", "card"]))).limit(1))[0];
+}
+
+export async function recordVerifiedPaystackPayment(paymentId: number, reference: string) {
+  const db = await requireDb();
+  return db.transaction(async (tx) => {
+    const payment = (await tx.select().from(payments).where(and(eq(payments.id, paymentId), eq(payments.providerReference, reference))).limit(1))[0];
+    if (!payment) throw new Error("Payment record not found");
+    if (payment.status === "successful") return payment;
+    const [updated] = await tx.update(payments).set({ status: "successful", updatedAt: new Date() }).where(eq(payments.id, paymentId)).returning();
+    return updated;
+  });
+}
+
+export async function markPaystackPaymentFailed(paymentId: number, reference: string) {
+  const db = await requireDb();
+  const [updated] = await db.update(payments).set({ status: "failed", updatedAt: new Date() })
+    .where(and(eq(payments.id, paymentId), eq(payments.providerReference, reference), eq(payments.status, "pending"))).returning();
+  return updated;
+}
+
+export async function getOrderForTelegramNotification(orderId: number) {
+  const db = await requireDb();
+  const [order] = await db.select({
+    id: orders.id, orderNumber: orders.orderNumber, status: orders.status, customerName: users.name,
+    subtotalPesewas: orders.subtotalPesewas, deliveryFeePesewas: orders.deliveryFeePesewas, totalPesewas: orders.totalPesewas,
+    customerNote: orders.customerNote, orderType: orders.orderType, paymentMethod: payments.method, paymentStatus: payments.status,
+    deliveryPhone: orders.deliveryPhone, deliveryAddress: orders.deliveryAddress, deliveryInstructions: orders.deliveryInstructions,
+  }).from(orders).innerJoin(users, eq(orders.userId, users.id)).leftJoin(payments, eq(payments.orderId, orders.id)).where(eq(orders.id, orderId)).limit(1);
+  if (!order) return undefined;
+  const items = await db.select({ name: orderItems.productName, quantity: orderItems.quantity, unitPricePesewas: orderItems.unitPricePesewas, lineTotalPesewas: orderItems.lineTotalPesewas })
+    .from(orderItems).where(eq(orderItems.orderId, orderId));
+  return {
+    ...order,
+    customerName: order.customerName ?? "Customer",
+    paymentMethod: order.paymentMethod ?? "cash_on_pickup",
+    paymentStatus: order.paymentStatus ?? "pending",
+    customerNote: order.customerNote ?? undefined,
+    deliveryPhone: order.deliveryPhone ?? undefined,
+    deliveryAddress: order.deliveryAddress ?? undefined,
+    deliveryInstructions: order.deliveryInstructions ?? undefined,
+    items,
+  };
 }
 
 export async function listOrdersForUser(userId: number) {
@@ -385,7 +455,9 @@ export async function listKitchenOrders() {
     id: orders.id, orderNumber: orders.orderNumber, status: orders.status, orderType: orders.orderType, totalPesewas: orders.totalPesewas,
     customerName: users.name, customerNote: orders.customerNote, deliveryPhone: orders.deliveryPhone, deliveryAddress: orders.deliveryAddress,
     deliveryInstructions: orders.deliveryInstructions, createdAt: orders.createdAt, paymentMethod: payments.method, paymentStatus: payments.status,
-  }).from(orders).innerJoin(users, eq(orders.userId, users.id)).leftJoin(payments, eq(payments.orderId, orders.id)).orderBy(desc(orders.createdAt)).limit(80);
+  }).from(orders).innerJoin(users, eq(orders.userId, users.id)).leftJoin(payments, eq(payments.orderId, orders.id))
+    .where(or(inArray(payments.method, ["cash_on_pickup", "cash_on_delivery"]), eq(payments.status, "successful")))
+    .orderBy(desc(orders.createdAt)).limit(80);
   if (!orderRows.length) return [];
   const items = await db.select({ orderId: orderItems.orderId, productName: orderItems.productName, quantity: orderItems.quantity })
     .from(orderItems).where(inArray(orderItems.orderId, orderRows.map((order) => order.id)));

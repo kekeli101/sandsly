@@ -76,6 +76,13 @@ export default function Account() {
     },
     onError: error => toast.error("Couldn’t save profile", { description: error.message }),
   });
+  const restartPaymentMutation = trpc.storefront.startPaystackPayment.useMutation({
+    onSuccess: result => {
+      toast.success("Opening secure Paystack test checkout", { description: `Continuing payment for ${result.orderNumber}.` });
+      window.location.assign(result.authorizationUrl);
+    },
+    onError: error => toast.error("Couldn’t restart secure checkout", { description: error.message }),
+  });
 
   useEffect(() => {
     setPhone(profileQuery.data?.phone ?? "");
@@ -185,7 +192,7 @@ export default function Account() {
           ) : (ordersQuery.data?.length ?? 0) === 0 ? (
             <div className="mt-4 rounded-[15px] border border-[#393432] bg-[#242424] p-6 text-sm leading-6 text-[#bdb2ac]">Your completed and active orders, payment choices, item details, and live preparation updates will appear here.</div>
           ) : (
-            <div className="mt-4 space-y-4">{ordersQuery.data?.map(order => <OrderCard key={order.id} order={order} />)}</div>
+            <div className="mt-4 space-y-4">{ordersQuery.data?.map(order => <OrderCard key={order.id} order={order} retryPaystackPayment={() => restartPaymentMutation.mutate({ orderId: order.id })} retryingPayment={restartPaymentMutation.isPending} />)}</div>
           )}
         </section>
       </div>
@@ -238,7 +245,7 @@ function AuthScreen({
   </div></div>;
 }
 
-function OrderCard({ order }: { order: any }) {
+function OrderCard({ order, retryPaystackPayment, retryingPayment }: { order: any; retryPaystackPayment: () => void; retryingPayment: boolean }) {
   const isDelivery = order.orderType === "delivery";
   const steps = timeline.filter(step => isDelivery || !["out_for_delivery", "delivered"].includes(step));
   const reached = new Set(order.history?.map((event: any) => event.nextStatus) ?? [order.status]);
@@ -254,6 +261,7 @@ function OrderCard({ order }: { order: any }) {
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#191817] px-2.5 py-1.5 text-[#ded3cc]">{isDelivery ? <Bike size={12} /> : <PackageCheck size={12} />}{order.orderType}</span>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#191817] px-2.5 py-1.5 text-[#ded3cc]"><CreditCard size={12} />{labelize(order.paymentMethod)} · {order.paymentStatus}</span>
       </div>
+      {order.paymentStatus === "pending" && (order.paymentMethod === "card" || order.paymentMethod === "mobile_money") && <button type="button" disabled={retryingPayment} onClick={retryPaystackPayment} className="mt-4 inline-flex h-10 items-center gap-2 rounded-[9px] border border-[#ff5a1f]/60 px-3 text-[10px] font-black uppercase tracking-[0.12em] text-[#ffb09a] hover:bg-[#ff5a1f]/10 disabled:opacity-60"><CreditCard size={14} /> {retryingPayment ? "Opening checkout…" : "Complete Paystack test payment"}</button>}
       <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {steps.map((step, index) => {
           const active = reached.has(step) || index <= currentIndex;

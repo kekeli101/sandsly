@@ -24,3 +24,5 @@ services:
         sync: false
       - key: PASSWORD_RESET_TEST_RECIPIENT
         sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false

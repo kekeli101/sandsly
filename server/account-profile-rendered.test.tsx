@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   saveProfile: vi.fn(),
+  startPaystackPayment: vi.fn(),
   invalidateAuth: vi.fn(),
   invalidateProfile: vi.fn(),
   setLocation: vi.fn(),
@@ -38,6 +39,7 @@ vi.mock("@/lib/trpc", () => ({
         }], isLoading: false,
       }) },
       saveProfile: { useMutation: () => ({ mutate: mocks.saveProfile, isPending: false }) },
+      startPaystackPayment: { useMutation: () => ({ mutate: mocks.startPaystackPayment, isPending: false }) },
     },
   },
 }));
@@ -61,6 +63,7 @@ describe("rendered customer profile", () => {
     expect(screen.getByText("CB-12345678-321")).toBeTruthy();
     expect(screen.getByText("Matcha Cloud Boba ×2")).toBeTruthy();
     expect(screen.getByText("delivery")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Complete Paystack test payment" })).toBeTruthy();
 
     await user.clear(name);
     await user.type(name, "Ama Mensah");

@@ -28,6 +28,7 @@ vi.mock("@/lib/trpc", () => ({
       profile: { useQuery: () => ({ data: null }) },
       orders: { useQuery: () => ({ data: [], isLoading: false }) },
       saveProfile: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      startPaystackPayment: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
   },
 }));
