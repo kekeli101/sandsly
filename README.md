@@ -16,6 +16,7 @@ Sandsly is a mobile-first restaurant ordering platform for **The Crunch Bite**, 
 | Customer tracking | Live-refreshing Profile order cards with item details, payment state, fulfillment type, and a status timeline |
 | Kitchen Board | Kitchen/Admin-only access with Active and Finished tabs, pickup/delivery-aware status transitions, payment context, delivery details, and five-second polling |
 | Admin dashboard | Admin-only `/admin` reporting for order totals, active/finished counts, completed sales, customer count, popular dishes, and recent orders |
+| Manager Console | Admin-only `/admin` control center for fulfilled sales, provider-verified online collection, cash reconciliation, kitchen attention items, seven-day fulfilled-revenue trend, menu health, top dishes, payment ledger, and recent orders |
 | Telegram | Cash orders are sent after checkout; online orders are sent only after a Paystack-verified payment succeeds |
 | Performance | Compressed product photography, native lazy loading, catalog caching, and route-level JavaScript splitting |
 
@@ -148,6 +149,20 @@ The board polls every five seconds and refreshes when the browser regains focus.
 
 The same staff console now includes **Manage menu**. Kitchen/Admin users can add a product, edit its category, name, description, Ghana Cedi price, badge, crunch level, and sort order, and remove or restore products from the customer-facing menu. Menu photography is selected from the staff member’s device rather than entered as a URL. The API accepts only JPEG, PNG, and WebP files up to 5 MB, validates their file signatures, uploads them to the Supabase Storage `menu-images` bucket, and stores the resulting public object URL on the product. Upload access is restricted to Kitchen/Admin server procedures; the Supabase service-role key never reaches the browser. Removal is implemented as a soft deactivation so existing order history keeps its product snapshots. Customer catalog reads exclude inactive products, and catalog caches are invalidated after staff changes with a short freshness window for other storefront sessions.
 
+## Manager Console and finance reporting
+
+The owner/manager Console is available at `/admin` only to authenticated `admin` accounts. Its server-only reporting procedure is not available to customers or Kitchen accounts, and the Profile page shows a **Manager Console** entry only to administrators.
+
+| Console measure | Definition |
+| --- | --- |
+| Fulfilled sales | Total order value for orders whose operational status is `completed` or `delivered`. |
+| Online received | Card and Mobile Money payment records whose persisted provider status is `successful`. |
+| Cash to reconcile | Finished cash-method orders. This is an operational cash collection queue, not an assertion that the cash has been banked. |
+| Food performance | Quantity, fulfilled-order count, and preserved line-item revenue for top dishes on completed or delivered orders. |
+| Payment ledger | Order count and recorded amount grouped by payment method and persisted payment status. |
+
+> **Financial boundary:** The Console does not calculate profit. Ingredient inventory, supplier bills, food costs, payroll, expenses, refunds outside recorded payment state, and cash deposits are not yet persisted in Sandsly. It therefore displays sales and collection state rather than an estimated profit figure.
+
 ## Telegram order notifications
 
 After a successful checkout, the API formats a message containing the order number, customer name, fulfillment type, line items, quantities, subtotal, delivery fee, total, payment method/state, necessary delivery details, status, and optional customer note. It sends the message to the configured group through Telegram’s `sendMessage` endpoint.
@@ -167,7 +182,7 @@ Do not place either value in `VITE_*` variables, frontend code, Git history, scr
 
 Card and Mobile Money checkout use a server-only **Paystack test** secret. Sandsly creates a unique reference from the stored order total, redirects the customer to hosted checkout, and verifies the returned reference server-side. The `POST /api/paystack/webhook` endpoint is the independent payment-confirmation path for customers who close the browser before returning.
 
-The webhook verifies Paystack’s `x-paystack-signature` HMAC-SHA512 against the raw request body, then independently confirms the reference, `success` status, GHS currency, and pesewa amount with Paystack. Its atomic first-success update makes retries and simultaneous return/webhook verification safe: payment, Kitchen visibility, and Telegram release happen only once. Set the Paystack test dashboard webhook URL to `https://sandsly.onrender.com/api/paystack/webhook`. Keep `PAYSTACK_SECRET_KEY` server-side and use an `sk_test_...` key; the implementation refuses live keys pending a separate production-launch review.
+The webhook verifies Paystack’s `x-paystack-signature` HMAC-SHA512 against the raw request body, then independently confirms the reference, `success` status, GHS currency, and pesewa amount with Paystack. Its atomic first-success update makes retries and simultaneous return/webhook verification safe: payment, Kitchen visibility, and Telegram release happen only once. The Paystack Test Mode dashboard is configured with `https://sandsly.onrender.com/api/paystack/webhook`; the deployed API health check and an invalid-signature rejection probe were verified on 2026-08-22. Keep `PAYSTACK_SECRET_KEY` server-side and use an `sk_test_...` key; the implementation refuses live keys pending a separate production-launch review.
 
 ## External deployment
 
@@ -287,4 +302,6 @@ The repository contains supporting records for the completed release:
 - [`verification-telegram.md`](./verification-telegram.md) records deployed Telegram order-notification verification.
 - [`verification-performance.md`](./verification-performance.md) records measured baseline and optimization results.
 - [`verification-password-recovery.md`](./verification-password-recovery.md) records account-password and recovery interface verification.
+- [`verification-paystack-webhook.md`](./verification-paystack-webhook.md) records Test Mode webhook dashboard, endpoint-health, and defensive-ingress verification.
+- [`verification-manager-console.md`](./verification-manager-console.md) records protected-route visual review, role coverage, and the finance-reporting boundary.
 - [`todo.md`](./todo.md) preserves the implementation and verification history.

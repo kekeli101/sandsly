@@ -13,3 +13,7 @@ Render then completed its build and upload stages and launched `pnpm run start` 
 Render subsequently reported that the API service was live at `https://sandsly.onrender.com`; its public health endpoint returned `{"ok":true}`. The local 375px review confirmed the hosted-payment return screen remains readable and gives a safe route back to order history when a reference is absent.
 
 Final local validation completed with a clean TypeScript check, **24 test files and 64 tests passing**, and a successful production build. The test suite covers: test-key validation; server-authoritative amount, currency, reference, and ownership checks; idempotent success verification; cancelled, failed, and mismatched payment rejection; a retry route for pending online orders; Kitchen exclusion for unverified online payments; deferred Telegram notices until confirmed payment; and rendered checkout/return customer states. No real payment was initiated or collected.
+
+## Webhook operational follow-up
+
+On 2026-08-22, the Paystack Test Mode developer settings were reloaded after the approved configuration action. The Test Webhook URL persisted as `https://sandsly.onrender.com/api/paystack/webhook`. The deployed Render health endpoint returned HTTP 200 with `{"ok":true}`, and a deliberately invalid signed-request probe returned HTTP 401 with `{"received":false}`. The probe did not create or verify a payment. The detailed signed-webhook, replay-safety, and dashboard-configuration record is maintained in [`verification-paystack-webhook.md`](./verification-paystack-webhook.md).

@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   createOrderFromCart: vi.fn(),
   getCartForUser: vi.fn(),
   getCustomerProfile: vi.fn(),
+  getAdminDashboardData: vi.fn(),
+  getManagerConsoleData: vi.fn(),
   getOrderForTelegramNotification: vi.fn(),
   getPaystackPaymentForUser: vi.fn(),
   getPendingOnlinePaymentForUser: vi.fn(),

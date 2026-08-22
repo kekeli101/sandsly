@@ -155,7 +155,7 @@ export default function Account() {
                   </button>
                   {user?.role === "admin" && (
                     <button type="button" onClick={() => setLocation("/admin")} className="inline-flex h-10 items-center gap-2 rounded-[9px] border border-[#ff5a1f]/55 px-4 text-[10px] font-black uppercase tracking-[0.13em] text-[#ffb09a]">
-                      <BarChart3 size={15} /> Admin dashboard
+                      <BarChart3 size={15} /> Manager Console
                     </button>
                   )}
                 </div>

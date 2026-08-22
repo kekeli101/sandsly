@@ -470,6 +470,90 @@ export async function getAdminDashboardData() {
   return { summary: { ...summary, customerCount: customerCount.count }, popularItems, recentOrders: await listRecentOrdersForAdmin() };
 }
 
+/**
+ * Returns the read-only management snapshot used by the owner/manager console.
+ *
+ * Cash orders are intentionally shown as operational sales awaiting reconciliation,
+ * not as automatically settled cash. Online collections are based only on the
+ * separately persisted Paystack payment status.
+ */
+export async function getManagerConsoleData() {
+  const db = await requireDb();
+  const fulfilledStatuses = ["completed", "delivered"] as const;
+  const activeStatuses = ["pending", "accepted", "preparing", "ready", "out_for_delivery"] as const;
+  const [orderSummary, customerSummary, paymentSummary, menuSummary, paymentBreakdown, fulfillmentBreakdown, topItems, dailySales, recentOrders] = await Promise.all([
+    db.select({
+      totalOrders: sql<number>`count(*)::int`,
+      todayOrders: sql<number>`count(*) filter (where ${orders.createdAt} >= date_trunc('day', now()))::int`,
+      activeOrders: sql<number>`count(*) filter (where ${orders.status} in ('pending', 'accepted', 'preparing', 'ready', 'out_for_delivery'))::int`,
+      fulfilledOrders: sql<number>`count(*) filter (where ${orders.status} in ('completed', 'delivered'))::int`,
+      cancelledOrders: sql<number>`count(*) filter (where ${orders.status} = 'cancelled')::int`,
+      fulfilledSalesPesewas: sql<number>`coalesce(sum(${orders.totalPesewas}) filter (where ${orders.status} in ('completed', 'delivered')), 0)::int`,
+      todayFulfilledSalesPesewas: sql<number>`coalesce(sum(${orders.totalPesewas}) filter (where ${orders.status} in ('completed', 'delivered') and ${orders.updatedAt} >= date_trunc('day', now())), 0)::int`,
+    }).from(orders),
+    db.select({ customerCount: sql<number>`count(*)::int` }).from(users).where(eq(users.role, "user")),
+    db.select({
+      onlineCollectedPesewas: sql<number>`coalesce(sum(${payments.amountPesewas}) filter (where ${payments.status} = 'successful' and ${payments.method} in ('card', 'mobile_money')), 0)::int`,
+      pendingOnlinePesewas: sql<number>`coalesce(sum(${payments.amountPesewas}) filter (where ${payments.status} = 'pending' and ${payments.method} in ('card', 'mobile_money')), 0)::int`,
+      pendingOnlineCount: sql<number>`count(*) filter (where ${payments.status} = 'pending' and ${payments.method} in ('card', 'mobile_money'))::int`,
+      failedOrRefundedOnlinePesewas: sql<number>`coalesce(sum(${payments.amountPesewas}) filter (where ${payments.status} in ('failed', 'refunded') and ${payments.method} in ('card', 'mobile_money')), 0)::int`,
+      failedOrRefundedOnlineCount: sql<number>`count(*) filter (where ${payments.status} in ('failed', 'refunded') and ${payments.method} in ('card', 'mobile_money'))::int`,
+      cashFulfilledToReconcilePesewas: sql<number>`coalesce(sum(${payments.amountPesewas}) filter (where ${payments.method} in ('cash_on_pickup', 'cash_on_delivery') and ${orders.status} in ('completed', 'delivered')), 0)::int`,
+      cashFulfilledToReconcileCount: sql<number>`count(*) filter (where ${payments.method} in ('cash_on_pickup', 'cash_on_delivery') and ${orders.status} in ('completed', 'delivered'))::int`,
+    }).from(payments).innerJoin(orders, eq(payments.orderId, orders.id)),
+    db.select({
+      activeProducts: sql<number>`count(*) filter (where ${products.isActive} = true)::int`,
+      inactiveProducts: sql<number>`count(*) filter (where ${products.isActive} = false)::int`,
+    }).from(products),
+    db.select({
+      method: payments.method,
+      status: payments.status,
+      orderCount: sql<number>`count(*)::int`,
+      amountPesewas: sql<number>`coalesce(sum(${payments.amountPesewas}), 0)::int`,
+    }).from(payments).groupBy(payments.method, payments.status),
+    db.select({
+      status: orders.status,
+      orderCount: sql<number>`count(*)::int`,
+      totalPesewas: sql<number>`coalesce(sum(${orders.totalPesewas}), 0)::int`,
+    }).from(orders).groupBy(orders.status),
+    db.select({
+      name: orderItems.productName,
+      quantity: sql<number>`coalesce(sum(${orderItems.quantity}), 0)::int`,
+      revenuePesewas: sql<number>`coalesce(sum(${orderItems.lineTotalPesewas}), 0)::int`,
+      orderCount: sql<number>`count(distinct ${orderItems.orderId})::int`,
+    }).from(orderItems).innerJoin(orders, eq(orderItems.orderId, orders.id))
+      .where(inArray(orders.status, fulfilledStatuses)).groupBy(orderItems.productName)
+      .orderBy(desc(sql`sum(${orderItems.lineTotalPesewas})`)).limit(8),
+    db.select({
+      day: sql<string>`to_char(date_trunc('day', ${orders.updatedAt}), 'Mon DD')`,
+      orderCount: sql<number>`count(*)::int`,
+      revenuePesewas: sql<number>`coalesce(sum(${orders.totalPesewas}), 0)::int`,
+    }).from(orders).where(and(inArray(orders.status, fulfilledStatuses), sql`${orders.updatedAt} >= now() - interval '6 days'`))
+      .groupBy(sql`date_trunc('day', ${orders.updatedAt})`).orderBy(sql`date_trunc('day', ${orders.updatedAt})`),
+    listRecentOrdersForAdmin(),
+  ]);
+
+  return {
+    summary: {
+      ...orderSummary[0],
+      customerCount: customerSummary[0]?.customerCount ?? 0,
+      activeProducts: menuSummary[0]?.activeProducts ?? 0,
+      inactiveProducts: menuSummary[0]?.inactiveProducts ?? 0,
+    },
+    finance: paymentSummary[0] ?? {
+      onlineCollectedPesewas: 0, pendingOnlinePesewas: 0, pendingOnlineCount: 0,
+      failedOrRefundedOnlinePesewas: 0, failedOrRefundedOnlineCount: 0,
+      cashFulfilledToReconcilePesewas: 0, cashFulfilledToReconcileCount: 0,
+    },
+    paymentBreakdown,
+    fulfillmentBreakdown,
+    topItems,
+    dailySales,
+    recentOrders,
+    activeStatuses,
+  };
+}
+
 export async function listKitchenOrders() {
   const db = await requireDb();
   const orderRows = await db.select({

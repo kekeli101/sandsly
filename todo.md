@@ -123,10 +123,19 @@
 - [x] Keep card and Mobile Money orders out of the Kitchen workflow until Paystack verification records a successful payment.
 - [x] Give customers a safe retry path when a pending online-payment order cannot initialize its Paystack checkout link.
 - [x] Defer Telegram notification for online orders until Paystack records a successful payment.
-- [ ] Verify Paystack webhook requirements and document the production callback endpoint.
-- [ ] Add a raw-body, signature-validated Paystack webhook endpoint that rejects untrusted events.
-- [ ] Reconcile successful webhook events idempotently so payment, Kitchen, and Telegram state updates exactly once.
-- [ ] Add webhook signature, duplicate-event, malformed-payload, and successful payment-event regression coverage.
+- [x] Verify Paystack webhook requirements and document the production callback endpoint.
+- [x] Add a raw-body, signature-validated Paystack webhook endpoint that rejects untrusted events.
+- [x] Reconcile successful webhook events idempotently so payment, Kitchen, and Telegram state updates exactly once.
+- [x] Add webhook signature, duplicate-event, malformed-payload, and successful payment-event regression coverage.
 - [ ] Configure and verify the Paystack test dashboard callback URL for the deployed Render API.
-- [ ] Use one atomic success transition across both return-route verification and webhook delivery to prevent duplicate staff alerts.
-- [ ] Bound the Paystack credential probe with an explicit test timeout suitable for the provider’s network response window.
+- [x] Use one atomic success transition across both return-route verification and webhook delivery to prevent duplicate staff alerts.
+- [x] Bound the Paystack credential probe with an explicit test timeout suitable for the provider’s network response window.
+- [ ] Capture unambiguous Paystack Test Mode dashboard evidence that the configured webhook URL was saved.
+- [ ] Reconcile the webhook verification record and dashboard checklist status with the captured save evidence.
+- [x] Define owner/manager Admin Console metrics and role-protected access boundaries for restaurant operations, menu performance, orders, and finance.
+- [x] Add server-side manager analytics for paid revenue, payment method/state, order flow, fulfillment, top-selling menu items, and recent operational activity.
+- [x] Build a responsive Admin Console with actionable operational, menu, order, and finance views for the owner/manager.
+- [x] Add safe Admin Console links and access controls so only admin accounts can monitor management data.
+- [x] Add automated manager-analytics and role-authorization regression coverage.
+- [ ] Verify the owner/manager Console on desktop and mobile and document the release.
+- [x] Add and verify a discoverable admin-only Manager Console entry point from Profile or staff navigation, with visibility regression coverage.

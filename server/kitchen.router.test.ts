@@ -9,7 +9,7 @@ vi.mock("./db", () => ({
   createMenuProduct: mocks.createMenuProduct,
   updateMenuProduct: mocks.updateMenuProduct,
   setMenuProductActive: mocks.setMenuProductActive,
-  listCatalog: vi.fn(), listRecentOrdersForAdmin: vi.fn(), getCartForUser: vi.fn(), addCartItem: vi.fn(),
+  listCatalog: vi.fn(), listRecentOrdersForAdmin: vi.fn(), getAdminDashboardData: vi.fn(), getManagerConsoleData: vi.fn(), getCartForUser: vi.fn(), addCartItem: vi.fn(),
   setCartItemQuantity: vi.fn(), clearCartForUser: vi.fn(), createOrderFromCart: vi.fn(), getCustomerProfile: vi.fn(), saveCustomerProfile: vi.fn(),
 }));
 vi.mock("./menu-image-storage", () => ({ MenuImageStorageError: class MenuImageStorageError extends Error {}, uploadMenuImage: mocks.uploadMenuImage }));
