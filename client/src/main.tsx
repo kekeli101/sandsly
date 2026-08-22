@@ -8,7 +8,8 @@ import { readApiSessionToken } from "./lib/api-session";
 import "./index.css";
 
 const queryClient = new QueryClient();
-const apiBaseUrl = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "" : "https://sandsly.onrender.com")).replace(/\/+$/, "");
+const configuredApiUrl = (import.meta.env.VITE_API_URL ?? "").trim();
+const apiBaseUrl = (configuredApiUrl || (import.meta.env.DEV ? "" : "https://sandsly.onrender.com")).replace(/\/+$/, "");
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
