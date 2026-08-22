@@ -11,7 +11,7 @@ Sandsly is a mobile-first restaurant ordering platform for **The Crunch Bite**, 
 | Storefront | Responsive Home, searchable Menu, Cart, Profile, Rewards placeholder, and order-tracking routes |
 | Catalog | Boba, Yogurt, Ice Cream, Pizza, Fries, and Pork categories with active products, hosted food imagery, and staff device-image uploads |
 | Currency | All prices, delivery fees, totals, and notifications use Ghana cedis (`GH₵`) |
-| Customer accounts | Local email/password registration, accessible show/hide controls, signed HTTP-only sessions, and a non-enumerating recovery request flow |
+| Customer accounts | Local email/password registration, accessible show/hide controls, signed HTTP-only sessions, a bounded cross-host API credential stored only for the active browser session, and a non-enumerating recovery request flow |
 | Cart and checkout | Database-backed cart, quantity changes, pickup/delivery selection, delivery validation, notes, payment-method selection, Paystack test checkout, and payment-state records |
 | Customer tracking | Live-refreshing Profile order cards with item details, payment state, fulfillment type, and a status timeline |
 | Kitchen Board | Kitchen/Admin-only access with Active and Finished tabs, pickup/delivery-aware status transitions, payment context, delivery details, and five-second polling |
@@ -119,7 +119,7 @@ The seed creates or updates the six product categories and the active catalog en
 
 ## Authentication and roles
 
-Sandsly uses local email/password authentication with signed sessions. Passwords are stored as application-generated scrypt hashes; plaintext passwords must never be committed or placed in deployment manifests.
+Sandsly uses local email/password authentication with signed sessions. Passwords are stored as application-generated scrypt hashes; plaintext passwords must never be committed or placed in deployment manifests. On successful local sign-in, registration, or password reset, the API also returns a signed **12-hour** access credential. The browser keeps it only in `sessionStorage` for its current browser session and sends it as a Bearer credential to the Render API, so protected requests continue to work when the storefront and API are hosted on different origins. Logging out clears this browser-session credential; the API independently verifies its signature, expiry, and user record on every protected request.
 
 | Role | Access |
 | --- | --- |
@@ -229,7 +229,7 @@ Create a Vercel project from the repository using `vercel.json`.
 | Output directory | `dist/public` |
 | API routing | Same-origin `/api/*` rewrite to the Render API |
 
-Production frontend requests use the same-origin proxy configured in `vercel.json`, which helps preserve HTTP-only session-cookie behavior. For local development against a remote API, set `VITE_API_URL` to the API base URL; production builds use the same-origin path.
+Production frontend requests target the Render API directly and attach the bounded browser-session Bearer credential after local authentication. The existing Vercel rewrite remains available for compatible same-origin traffic, but protected routes do not depend on a cross-host cookie surviving the proxy. For local development against a remote API, set `VITE_API_URL` to the API base URL; production builds default to the deployed Render API URL.
 
 After deployment, verify the following in order:
 

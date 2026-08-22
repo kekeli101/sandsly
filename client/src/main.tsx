@@ -4,17 +4,21 @@ import { httpBatchLink } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
+import { readApiSessionToken } from "./lib/api-session";
 import "./index.css";
 
 const queryClient = new QueryClient();
-const apiBaseUrl = import.meta.env.DEV ? (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "") : "";
+const apiBaseUrl = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "" : "https://sandsly.onrender.com")).replace(/\/+$/, "");
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: `${apiBaseUrl}/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
-        return globalThis.fetch(input, { ...(init ?? {}), credentials: "include" });
+        const headers = new Headers(init?.headers);
+        const token = readApiSessionToken();
+        if (token) headers.set("authorization", `Bearer ${token}`);
+        return globalThis.fetch(input, { ...(init ?? {}), headers, credentials: "include" });
       },
     }),
   ],

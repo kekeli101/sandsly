@@ -9,6 +9,7 @@ import { getUserById } from "./db";
 const scrypt = promisify(scryptCallback);
 export const STANDALONE_SESSION_COOKIE = "sandsly_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const API_ACCESS_TTL_MS = 1000 * 60 * 60 * 12;
 const PASSWORD_MIN_LENGTH = 8;
 
 function sessionSecret() {
@@ -37,12 +38,16 @@ export async function verifyPassword(password: string, encoded: string | null | 
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-export async function createSessionToken(user: Pick<User, "id">) {
+export async function createSessionToken(user: Pick<User, "id">, ttlMs = SESSION_TTL_MS) {
   return new SignJWT({ userId: user.id })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setIssuedAt()
-    .setExpirationTime(Math.floor((Date.now() + SESSION_TTL_MS) / 1000))
+    .setExpirationTime(Math.floor((Date.now() + ttlMs) / 1000))
     .sign(sessionSecret());
+}
+
+export function createApiAccessToken(user: Pick<User, "id">) {
+  return createSessionToken(user, API_ACCESS_TTL_MS);
 }
 
 export function setSessionCookie(res: Response, req: Request, token: string) {
@@ -69,7 +74,9 @@ export function clearSessionCookie(res: Response, req: Request) {
 }
 
 export async function getStandaloneUser(req: Request) {
-  const token = parseCookie(req.headers.cookie ?? "")[STANDALONE_SESSION_COOKIE];
+  const authorization = req.headers.authorization;
+  const bearerToken = authorization?.startsWith("Bearer ") ? authorization.slice("Bearer ".length).trim() : null;
+  const token = bearerToken || parseCookie(req.headers.cookie ?? "")[STANDALONE_SESSION_COOKIE];
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, sessionSecret(), { algorithms: ["HS256"] });

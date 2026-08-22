@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { formatGhsPesewas } from "@/lib/catalog-types";
 import { trpc } from "@/lib/trpc";
+import { saveApiSessionToken } from "@/lib/api-session";
 import { getKitchenProfileAccess } from "@/lib/kitchen-access";
 import { PasswordVisibilityInput } from "@/components/PasswordVisibilityInput";
 
@@ -29,6 +30,10 @@ function labelize(value: string) {
 
 const timeline = ["pending", "accepted", "preparing", "ready", "out_for_delivery", "delivered", "completed"];
 type AuthMode = "login" | "register";
+type AuthenticatedResponse = {
+  user: { id: number; openId: string; name: string | null; email: string | null; loginMethod: string | null; role: "user" | "kitchen" | "admin"; createdAt: Date; updatedAt: Date; lastSignedIn: Date };
+  accessToken: string;
+};
 
 export default function Account() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -52,7 +57,9 @@ export default function Account() {
   const [displayName, setDisplayName] = useState("");
   const kitchenAccess = getKitchenProfileAccess(user?.role);
 
-  const completeAuth = async () => {
+  const completeAuth = async (response: AuthenticatedResponse) => {
+    saveApiSessionToken(response.accessToken);
+    utils.auth.me.setData(undefined, response.user as NonNullable<typeof user>);
     await utils.auth.me.invalidate();
     toast.success(authMode === "register" ? "Account created" : "Signed in");
   };

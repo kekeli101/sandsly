@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { clearApiSessionToken } from "@/lib/api-session";
 import { useCallback, useMemo } from "react";
 
 type UseAuthOptions = {
@@ -13,6 +14,7 @@ export function useAuth(options?: UseAuthOptions) {
   const logoutMutation = trpc.auth.logout.useMutation({ onSuccess: () => utils.auth.me.setData(undefined, null) });
   const logout = useCallback(async () => {
     try { await logoutMutation.mutateAsync(); } finally {
+      clearApiSessionToken();
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
       if (redirectPath && typeof window !== "undefined") window.location.href = redirectPath;

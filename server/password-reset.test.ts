@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   sendPasswordResetEmail: vi.fn(),
   hashPassword: vi.fn(),
   createSessionToken: vi.fn(),
+  createApiAccessToken: vi.fn(),
   setSessionCookie: vi.fn(),
 }));
 
@@ -24,6 +25,7 @@ vi.mock("./password-reset-db", () => ({
 vi.mock("./password-reset-email", () => ({ canDeliverPasswordResetEmail: mocks.canDeliverPasswordResetEmail, sendPasswordResetEmail: mocks.sendPasswordResetEmail }));
 vi.mock("./standalone-auth", () => ({
   clearSessionCookie: vi.fn(),
+  createApiAccessToken: mocks.createApiAccessToken,
   createSessionToken: mocks.createSessionToken,
   hashPassword: mocks.hashPassword,
   normalizedEmail: (email: string) => email.trim().toLowerCase(),
@@ -69,6 +71,7 @@ describe("password reset", () => {
     mocks.sendPasswordResetEmail.mockResolvedValue(undefined);
     mocks.hashPassword.mockResolvedValue("scrypt$new-password");
     mocks.createSessionToken.mockResolvedValue("session-token");
+    mocks.createApiAccessToken.mockResolvedValue("bounded-access-token");
   });
 
   it("generates a high-entropy reset secret and stores only its SHA-256 hash", () => {
@@ -138,7 +141,9 @@ describe("password reset", () => {
     expect(mocks.hashPassword).toHaveBeenCalledWith("fresh-password");
     expect(mocks.resetPasswordFromToken).toHaveBeenCalledWith(hashPasswordResetToken("a".repeat(43)), "scrypt$new-password");
     expect(mocks.setSessionCookie).toHaveBeenCalledWith(ctx.res, ctx.req, "session-token");
-    expect(result).not.toHaveProperty("passwordHash");
+    expect(mocks.createApiAccessToken).toHaveBeenCalledWith(localUser);
+    expect(result).toMatchObject({ accessToken: "bounded-access-token", user: { email: localUser.email, role: "user" } });
+    expect(result.user).not.toHaveProperty("passwordHash");
   });
 
   it("rejects an invalid or expired reset token without starting a session", async () => {

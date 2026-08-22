@@ -140,7 +140,8 @@
 - [x] Add safe Admin Console links and access controls so only admin accounts can monitor management data.
 - [x] Add automated manager-analytics and role-authorization regression coverage.
 - [ ] Sign in with an administrator account and verify the actual Manager Console data view on desktop and mobile, then update the verification record.
-- [ ] Diagnose why the supplied deployed administrator credentials are rejected without exposing account secrets.
+- [x] Diagnose why the supplied deployed administrator credentials are rejected without exposing account secrets.
 - [ ] Repair the intended administrator account access safely, then verify the live Manager Console data view on desktop and mobile.
 - [ ] Diagnose and repair the Vercel-to-Render session forwarding mismatch that leaves an authenticated browser session forbidden from `admin.console`.
+- [ ] Replace the unreliable cross-host cookie dependency with a secure, bounded standalone authorization transport for the Vercel storefront and Render API.
 - [x] Add and verify a discoverable admin-only Manager Console entry point from Profile or staff navigation, with visibility regression coverage.
