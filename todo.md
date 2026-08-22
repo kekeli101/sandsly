@@ -127,15 +127,20 @@
 - [x] Add a raw-body, signature-validated Paystack webhook endpoint that rejects untrusted events.
 - [x] Reconcile successful webhook events idempotently so payment, Kitchen, and Telegram state updates exactly once.
 - [x] Add webhook signature, duplicate-event, malformed-payload, and successful payment-event regression coverage.
-- [ ] Configure and verify the Paystack test dashboard callback URL for the deployed Render API.
+- [x] Configure and verify the Paystack test dashboard callback URL for the deployed Render API.
 - [x] Use one atomic success transition across both return-route verification and webhook delivery to prevent duplicate staff alerts.
 - [x] Bound the Paystack credential probe with an explicit test timeout suitable for the provider’s network response window.
-- [ ] Capture unambiguous Paystack Test Mode dashboard evidence that the configured webhook URL was saved.
-- [ ] Reconcile the webhook verification record and dashboard checklist status with the captured save evidence.
+- [x] Capture unambiguous Paystack Test Mode dashboard evidence that the configured webhook URL was saved.
+- [x] Reconcile the webhook verification record and dashboard checklist status with the captured save evidence.
+- [x] Diagnose the selected-browser sign-in visibility issue and either recover a usable Paystack Test Mode session or document the operational blocker.
+- [x] Confirm the Paystack verification records contain the persisted Test Mode URL and disabled-save evidence before final release closure.
 - [x] Define owner/manager Admin Console metrics and role-protected access boundaries for restaurant operations, menu performance, orders, and finance.
 - [x] Add server-side manager analytics for paid revenue, payment method/state, order flow, fulfillment, top-selling menu items, and recent operational activity.
 - [x] Build a responsive Admin Console with actionable operational, menu, order, and finance views for the owner/manager.
 - [x] Add safe Admin Console links and access controls so only admin accounts can monitor management data.
 - [x] Add automated manager-analytics and role-authorization regression coverage.
-- [ ] Verify the owner/manager Console on desktop and mobile and document the release.
+- [ ] Sign in with an administrator account and verify the actual Manager Console data view on desktop and mobile, then update the verification record.
+- [ ] Diagnose why the supplied deployed administrator credentials are rejected without exposing account secrets.
+- [ ] Repair the intended administrator account access safely, then verify the live Manager Console data view on desktop and mobile.
+- [ ] Diagnose and repair the Vercel-to-Render session forwarding mismatch that leaves an authenticated browser session forbidden from `admin.console`.
 - [x] Add and verify a discoverable admin-only Manager Console entry point from Profile or staff navigation, with visibility regression coverage.

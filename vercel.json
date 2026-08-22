@@ -4,7 +4,6 @@
   "buildCommand": "pnpm build:client",
   "outputDirectory": "dist/public",
   "rewrites": [
-    { "source": "/api/trpc/:path*", "destination": "https://sandsly.onrender.com/api/trpc/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

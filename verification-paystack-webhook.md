@@ -2,18 +2,19 @@
 
 ## Verified configuration
 
-On **2026-08-22**, the Paystack Test Mode developer settings were reloaded after the approved configuration action. The **Test Webhook URL** field persisted as:
+On **2026-08-22**, the Paystack Test Mode developer settings were reloaded in the authenticated owner browser after the approved configuration action. The **Test Webhook URL** field persisted as:
 
 ```text
 https://sandsly.onrender.com/api/paystack/webhook
 ```
 
-The reloaded settings did not show a pending configuration change. This confirms that the public Render endpoint is registered in **Paystack Test Mode**. No live-mode setting, live key, transaction, customer charge, or production payment was created during this verification.
+The reloaded server-backed form marked its `Save changes` submit control as **disabled**, meaning the displayed endpoint was not a local unsaved edit and no further save action was available. This provides the operational persistence evidence that the public Render endpoint is registered in **Paystack Test Mode**. No live-mode setting, live key, transaction, customer charge, or production payment was created during this verification.
 
 ## Deployed-endpoint evidence
 
 | Check | Observed result | Meaning |
 | --- | --- | --- |
+| Dashboard persistence | Authenticated Test Mode settings reloaded with the exact webhook URL and a disabled `Save changes` submit control | The setting is persisted by Paystack rather than remaining a local unsaved form change. |
 | Render health endpoint | `GET https://sandsly.onrender.com/healthz` returned `{"ok":true}` with HTTP 200 | The deployed API behind the registered webhook URL is reachable. |
 | Untrusted webhook probe | A JSON `POST` with a deliberately invalid `x-paystack-signature` returned `{"received":false}` with HTTP 401 | The public endpoint rejects a request that is not signed with the Paystack Test Mode secret. |
 | Application regression suite | The webhook implementation milestone previously completed TypeScript validation, 25 test files / 69 tests, and a production build | Raw-body signature validation, malformed input handling, replay safety, amount/reference checks, and return/webhook concurrency remain covered. |
