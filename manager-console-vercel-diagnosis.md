@@ -4,7 +4,7 @@ On 2026-08-22, the Vercel production deployment for Sandsly was inspected while 
 
 The Vercel project’s production settings showed the **Vite** framework preset, a `pnpm build:client` build command, and `dist/public` static output. Vercel’s Vite guidance describes Vite as producing static assets and notes that a Vite project needs an additional supported backend approach to use functions. [1] The Vercel Functions guidance confirms that functions are intended to serve server-side request handlers, including authentication and API work. [2]
 
-The approved remediation is to change the project Framework Preset from **Vite** to **Other** while preserving the repository-managed build and static-output configuration, so the explicit same-origin `/api/trpc` proxy can deploy alongside the SPA. The configuration change has not been claimed as complete until the refreshed deployment serves the proxy and the authenticated administrator query succeeds.
+An explicit serverless proxy was attempted after changing the project Framework Preset to **Other**, but Vercel continued to emit a static-only artifact with zero function invocations. The project already had a proven Vercel external rewrite for the standalone Render API, so the configuration was returned to that rewrite rather than leaving an inactive proxy path in production. The next verification step is a fresh administrator sign-in through the restored rewrite and a successful authenticated `admin.console` query.
 
 ## References
 
