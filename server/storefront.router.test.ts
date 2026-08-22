@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   listOrdersForUser: vi.fn(),
   listRecentOrdersForAdmin: vi.fn(),
   markPaystackPaymentFailed: vi.fn(),
-  recordVerifiedPaystackPayment: vi.fn(),
+  recordVerifiedPaystackPaymentOnce: vi.fn(),
   saveCustomerAccountDetails: vi.fn(),
   attachPaystackReference: vi.fn(),
   initializePaystackTestPayment: vi.fn(),
@@ -89,14 +89,14 @@ describe("storefront protected procedures", () => {
   it("records a Paystack success only when reference, GHS currency, and amount match the owned payment", async () => {
     mocks.getPaystackPaymentForUser.mockResolvedValue({ paymentId: 88, orderId: 101, orderNumber: "CB-12345678-321", amountPesewas: 9500, status: "pending", method: "mobile_money", reference: "SANDS-101-testreference" });
     mocks.verifyPaystackTestPayment.mockResolvedValue({ reference: "SANDS-101-testreference", status: "success", amount: 9500, currency: "GHS", channel: "mobile_money" });
-    mocks.recordVerifiedPaystackPayment.mockResolvedValue({ status: "successful" });
+    mocks.recordVerifiedPaystackPaymentOnce.mockResolvedValue({ newlySuccessful: true });
     mocks.getOrderForTelegramNotification.mockResolvedValue({ orderNumber: "CB-12345678-321", customerName: "Crunch Customer", status: "pending", subtotalPesewas: 7500, deliveryFeePesewas: 2000, totalPesewas: 9500, orderType: "delivery", paymentMethod: "mobile_money", paymentStatus: "successful", items: [] });
     const caller = appRouter.createCaller(createCustomerContext());
 
     const result = await caller.storefront.verifyPaystackPayment({ reference: "SANDS-101-testreference" });
 
     expect(result).toEqual({ orderNumber: "CB-12345678-321", status: "successful", alreadyVerified: false });
-    expect(mocks.recordVerifiedPaystackPayment).toHaveBeenCalledWith(88, "SANDS-101-testreference");
+    expect(mocks.recordVerifiedPaystackPaymentOnce).toHaveBeenCalledWith(88, "SANDS-101-testreference");
     expect(mocks.notifyTelegramNewOrder).toHaveBeenCalledWith(expect.objectContaining({ paymentStatus: "successful", orderNumber: "CB-12345678-321" }));
   });
 
@@ -108,7 +108,7 @@ describe("storefront protected procedures", () => {
 
     expect(result).toEqual({ orderNumber: "CB-12345678-321", status: "successful", alreadyVerified: true });
     expect(mocks.verifyPaystackTestPayment).not.toHaveBeenCalled();
-    expect(mocks.recordVerifiedPaystackPayment).not.toHaveBeenCalled();
+    expect(mocks.recordVerifiedPaystackPaymentOnce).not.toHaveBeenCalled();
   });
 
   it("rejects a Paystack result whose verified amount does not equal the stored order total", async () => {
@@ -117,7 +117,7 @@ describe("storefront protected procedures", () => {
     const caller = appRouter.createCaller(createCustomerContext());
 
     await expect(caller.storefront.verifyPaystackPayment({ reference: "SANDS-101-testreference" })).rejects.toThrow("do not match");
-    expect(mocks.recordVerifiedPaystackPayment).not.toHaveBeenCalled();
+    expect(mocks.recordVerifiedPaystackPaymentOnce).not.toHaveBeenCalled();
   });
 
   it("records an abandoned matching transaction as failed without marking the order paid", async () => {
@@ -130,7 +130,20 @@ describe("storefront protected procedures", () => {
 
     expect(result).toEqual({ orderNumber: "CB-12345678-321", status: "failed", alreadyVerified: false });
     expect(mocks.markPaystackPaymentFailed).toHaveBeenCalledWith(88, "SANDS-101-testreference");
-    expect(mocks.recordVerifiedPaystackPayment).not.toHaveBeenCalled();
+    expect(mocks.recordVerifiedPaystackPaymentOnce).not.toHaveBeenCalled();
+  });
+
+  it("does not send a second staff alert when a simultaneous webhook has already recorded payment success", async () => {
+    mocks.getPaystackPaymentForUser.mockResolvedValue({ paymentId: 88, orderId: 101, orderNumber: "CB-12345678-321", amountPesewas: 9500, status: "pending", method: "card", reference: "SANDS-101-testreference" });
+    mocks.verifyPaystackTestPayment.mockResolvedValue({ reference: "SANDS-101-testreference", status: "success", amount: 9500, currency: "GHS" });
+    mocks.recordVerifiedPaystackPaymentOnce.mockResolvedValue({ newlySuccessful: false });
+    const caller = appRouter.createCaller(createCustomerContext());
+
+    const result = await caller.storefront.verifyPaystackPayment({ reference: "SANDS-101-testreference" });
+
+    expect(result).toEqual({ orderNumber: "CB-12345678-321", status: "successful", alreadyVerified: true });
+    expect(mocks.getOrderForTelegramNotification).not.toHaveBeenCalled();
+    expect(mocks.notifyTelegramNewOrder).not.toHaveBeenCalled();
   });
 
   it("lets the owner of a pending online-payment order retry Paystack checkout safely", async () => {

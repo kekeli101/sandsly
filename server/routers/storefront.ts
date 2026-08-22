@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { addCartItem, attachPaystackReference, clearCartForUser, createOrderFromCart, getCartForUser, getCustomerProfile, getOrderForTelegramNotification, getPaystackPaymentForUser, getPendingOnlinePaymentForUser, listOrdersForUser, markPaystackPaymentFailed, recordVerifiedPaystackPayment, saveCustomerAccountDetails, setCartItemQuantity } from "../db";
+import { addCartItem, attachPaystackReference, clearCartForUser, createOrderFromCart, getCartForUser, getCustomerProfile, getOrderForTelegramNotification, getPaystackPaymentForUser, getPendingOnlinePaymentForUser, listOrdersForUser, markPaystackPaymentFailed, recordVerifiedPaystackPaymentOnce, saveCustomerAccountDetails, setCartItemQuantity } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
 import { notifyTelegramNewOrder } from "../telegram";
 import { orderTypeValues, paymentMethodValues } from "../../drizzle/schema";
@@ -67,16 +67,18 @@ export const storefrontRouter = router({
         throw new Error("The Paystack payment details do not match this order");
       }
       if (verified.status === "success") {
-        await recordVerifiedPaystackPayment(payment.paymentId, input.reference);
-        const notification = await getOrderForTelegramNotification(payment.orderId);
-        if (notification) {
-          try {
-            await notifyTelegramNewOrder(notification);
-          } catch (error) {
-            console.warn("[Telegram] Paid-order notification failed; payment remains successful", error);
+        const recorded = await recordVerifiedPaystackPaymentOnce(payment.paymentId, input.reference);
+        if (recorded.newlySuccessful) {
+          const notification = await getOrderForTelegramNotification(payment.orderId);
+          if (notification) {
+            try {
+              await notifyTelegramNewOrder(notification);
+            } catch (error) {
+              console.warn("[Telegram] Paid-order notification failed; payment remains successful", error);
+            }
           }
         }
-        return { orderNumber: payment.orderNumber, status: "successful" as const, alreadyVerified: false };
+        return { orderNumber: payment.orderNumber, status: "successful" as const, alreadyVerified: !recorded.newlySuccessful };
       }
       if (verified.status === "failed" || verified.status === "abandoned" || verified.status === "reversed") {
         await markPaystackPaymentFailed(payment.paymentId, input.reference);

@@ -14,5 +14,5 @@ describe("Paystack test credentials", () => {
     expect(response.status, "Paystack must accept the configured test credential").not.toBe(401);
     expect(response.status, "Paystack must authorize the configured test credential").not.toBe(403);
     expect(response.ok, `Paystack credential check returned ${response.status}`).toBe(true);
-  });
+  }, 15_000);
 });

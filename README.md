@@ -12,11 +12,11 @@ Sandsly is a mobile-first restaurant ordering platform for **The Crunch Bite**, 
 | Catalog | Boba, Yogurt, Ice Cream, Pizza, Fries, and Pork categories with active products, hosted food imagery, and staff device-image uploads |
 | Currency | All prices, delivery fees, totals, and notifications use Ghana cedis (`GH₵`) |
 | Customer accounts | Local email/password registration, accessible show/hide controls, signed HTTP-only sessions, and a non-enumerating recovery request flow |
-| Cart and checkout | Database-backed cart, quantity changes, pickup/delivery selection, delivery validation, notes, payment-method selection, and payment-state records |
+| Cart and checkout | Database-backed cart, quantity changes, pickup/delivery selection, delivery validation, notes, payment-method selection, Paystack test checkout, and payment-state records |
 | Customer tracking | Live-refreshing Profile order cards with item details, payment state, fulfillment type, and a status timeline |
 | Kitchen Board | Kitchen/Admin-only access with Active and Finished tabs, pickup/delivery-aware status transitions, payment context, delivery details, and five-second polling |
 | Admin dashboard | Admin-only `/admin` reporting for order totals, active/finished counts, completed sales, customer count, popular dishes, and recent orders |
-| Telegram | Successful checkouts are formatted and sent to the configured Telegram group through the official Bot API |
+| Telegram | Cash orders are sent after checkout; online orders are sent only after a Paystack-verified payment succeeds |
 | Performance | Compressed product photography, native lazy loading, catalog caching, and route-level JavaScript splitting |
 
 ## Architecture
@@ -33,6 +33,7 @@ Drizzle ORM + PostgreSQL on Supabase
                 |
                 +--> Supabase Storage for staff-uploaded menu images
                 +--> Telegram Bot API for new-order notifications
+                +--> Paystack API and signed payment webhooks
 ```
 
 The frontend uses React Query through tRPC. Public catalog reads use a short freshness window so staff availability changes reach customer storefronts quickly. Product cards load images lazily and asynchronously, while the Home hero is prioritized. The expanded-menu images are compressed hosted assets rather than repository files.
@@ -91,6 +92,7 @@ SUPABASE_DATABASE_URL=postgresql://postgres:<password>@<host>:5432/postgres
 FRONTEND_ORIGIN=http://localhost:3000
 TELEGRAM_BOT_TOKEN=<optional-bot-token>
 TELEGRAM_CHAT_ID=<optional-group-chat-id>
+PAYSTACK_SECRET_KEY=<server-only-sk_test-key>
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<server-only-service-role-key-for-menu-image-uploads>
 RESEND_API_KEY=<server-only-resend-api-key>
@@ -160,6 +162,12 @@ Configure these values **only on the API server**:
 | `TELEGRAM_CHAT_ID` | Destination Telegram group or chat ID | Required for notifications |
 
 Do not place either value in `VITE_*` variables, frontend code, Git history, screenshots, or README files. After adding the bot to the group, ensure it has permission to send messages. The credential check in `server/telegram.credentials.test.ts` validates the bot through Telegram’s `getMe` endpoint.
+
+## Paystack test checkout and webhooks
+
+Card and Mobile Money checkout use a server-only **Paystack test** secret. Sandsly creates a unique reference from the stored order total, redirects the customer to hosted checkout, and verifies the returned reference server-side. The `POST /api/paystack/webhook` endpoint is the independent payment-confirmation path for customers who close the browser before returning.
+
+The webhook verifies Paystack’s `x-paystack-signature` HMAC-SHA512 against the raw request body, then independently confirms the reference, `success` status, GHS currency, and pesewa amount with Paystack. Its atomic first-success update makes retries and simultaneous return/webhook verification safe: payment, Kitchen visibility, and Telegram release happen only once. Set the Paystack test dashboard webhook URL to `https://sandsly.onrender.com/api/paystack/webhook`. Keep `PAYSTACK_SECRET_KEY` server-side and use an `sk_test_...` key; the implementation refuses live keys pending a separate production-launch review.
 
 ## External deployment
 

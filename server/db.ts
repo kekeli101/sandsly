@@ -324,6 +324,15 @@ export async function getPaystackPaymentForUser(userId: number, reference: strin
     .where(and(eq(orders.userId, userId), eq(payments.providerReference, reference))).limit(1))[0];
 }
 
+export async function getPaystackPaymentForWebhook(reference: string) {
+  const db = await requireDb();
+  return (await db.select({
+    paymentId: payments.id, orderId: orders.id, orderNumber: orders.orderNumber, amountPesewas: payments.amountPesewas,
+    status: payments.status, method: payments.method, reference: payments.providerReference,
+  }).from(payments).innerJoin(orders, eq(payments.orderId, orders.id))
+    .where(and(eq(payments.providerReference, reference), inArray(payments.method, ["mobile_money", "card"]))).limit(1))[0];
+}
+
 export async function getPendingOnlinePaymentForUser(userId: number, orderId: number) {
   const db = await requireDb();
   return (await db.select({
@@ -341,6 +350,18 @@ export async function recordVerifiedPaystackPayment(paymentId: number, reference
     if (payment.status === "successful") return payment;
     const [updated] = await tx.update(payments).set({ status: "successful", updatedAt: new Date() }).where(eq(payments.id, paymentId)).returning();
     return updated;
+  });
+}
+
+export async function recordVerifiedPaystackPaymentOnce(paymentId: number, reference: string) {
+  const db = await requireDb();
+  return db.transaction(async (tx) => {
+    const [updated] = await tx.update(payments).set({ status: "successful", updatedAt: new Date() })
+      .where(and(eq(payments.id, paymentId), eq(payments.providerReference, reference), eq(payments.status, "pending"))).returning();
+    if (updated) return { payment: updated, newlySuccessful: true };
+    const payment = (await tx.select().from(payments).where(and(eq(payments.id, paymentId), eq(payments.providerReference, reference))).limit(1))[0];
+    if (!payment) throw new Error("Payment record not found");
+    return { payment, newlySuccessful: false };
   });
 }
 

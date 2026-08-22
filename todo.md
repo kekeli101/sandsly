@@ -123,3 +123,10 @@
 - [x] Keep card and Mobile Money orders out of the Kitchen workflow until Paystack verification records a successful payment.
 - [x] Give customers a safe retry path when a pending online-payment order cannot initialize its Paystack checkout link.
 - [x] Defer Telegram notification for online orders until Paystack records a successful payment.
+- [ ] Verify Paystack webhook requirements and document the production callback endpoint.
+- [ ] Add a raw-body, signature-validated Paystack webhook endpoint that rejects untrusted events.
+- [ ] Reconcile successful webhook events idempotently so payment, Kitchen, and Telegram state updates exactly once.
+- [ ] Add webhook signature, duplicate-event, malformed-payload, and successful payment-event regression coverage.
+- [ ] Configure and verify the Paystack test dashboard callback URL for the deployed Render API.
+- [ ] Use one atomic success transition across both return-route verification and webhook delivery to prevent duplicate staff alerts.
+- [ ] Bound the Paystack credential probe with an explicit test timeout suitable for the provider’s network response window.

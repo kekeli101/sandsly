@@ -53,7 +53,15 @@ Until a custom domain is verified in Resend, use `RESEND_FROM_EMAIL=onboarding@r
 
 Online Card and Mobile Money choices initialize a hosted **Paystack test** checkout. Set `PAYSTACK_SECRET_KEY` to an `sk_test_...` key only on the API host. Sandsly creates the order first, calculates its GHS amount on the server in pesewas, generates a unique payment reference, and redirects the customer to Paystack. The `/payment/verify?reference=...` return route verifies the reference server-side and marks the payment successful only when Paystack returns `data.status=success`, the stored reference matches, the currency is GHS, and the amount equals the stored order total.
 
-The test rollout deliberately refuses a live `sk_live_...` key. Do not switch to live payments until the Paystack business account, production callback URL, customer support process, reconciliation workflow, and signed `charge.success` webhook handling have been reviewed and explicitly approved. The current redirect return verification does not create a real charge with a test key.
+Sandsly also receives `charge.success` events at the public API endpoint:
+
+```text
+https://sandsly.onrender.com/api/paystack/webhook
+```
+
+Add that URL in the **Paystack test dashboard** developer settings. The endpoint receives the raw JSON body, validates the `x-paystack-signature` HMAC-SHA512 header using the server-only Paystack secret, then independently verifies the transaction with Paystack before recording it. Duplicate deliveries are idempotent: only the first pending-to-successful transition releases the order to Kitchen and sends its Telegram notification. Invalid signatures, malformed payloads, mismatched amount/currency/reference, unknown events, and non-successful verification results cannot mark an order paid. A transient verification/database failure returns a non-2xx response so Paystack retries delivery.
+
+The test rollout deliberately refuses a live `sk_live_...` key. Do not switch to live payments until the Paystack business account, production webhook URL, customer support process, reconciliation workflow, and successful end-to-end test event have been reviewed and explicitly approved.
 
 ## External assets and menu uploads
 
@@ -77,7 +85,7 @@ For the configured verification account, use the credentials supplied to the pro
 
 The recommended external split is Vercel for the React/Vite frontend, Render for the Express/tRPC API, and Supabase for Postgres persistence. Vercel should use the repository root with `vercel.json`; its build command is `pnpm build:client`, output directory is `dist/public`, and `VITE_API_URL` must point to the deployed Render API URL, for example `https://sandsly-api.onrender.com`.
 
-Render should create a Node web service from the repository using `render.yaml`, or equivalent dashboard settings. Its build command is `pnpm install --frozen-lockfile && pnpm build`, its start command is `pnpm start`, and its health check is `/healthz`. Configure `NODE_ENV=production`, `JWT_SECRET`, `SUPABASE_DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `FRONTEND_ORIGIN`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `PASSWORD_RESET_TEST_RECIPIENT`, and the test-only `PAYSTACK_SECRET_KEY` with the final Vercel production URL. Configure `TELEGRAM_BOT_TOKEN` with the bot token and `TELEGRAM_CHAT_ID` with the destination group ID. Keep the Telegram values, Paystack key, Resend credentials, and Supabase service-role key server-side in Render; never place them in Vercel frontend variables or source control. Render supplies `PORT` automatically.
+Render should create a Node web service from the repository using `render.yaml`, or equivalent dashboard settings. Its build command is `pnpm install --frozen-lockfile && pnpm build`, its start command is `pnpm start`, and its health check is `/healthz`. Configure `NODE_ENV=production`, `JWT_SECRET`, `SUPABASE_DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `FRONTEND_ORIGIN`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `PASSWORD_RESET_TEST_RECIPIENT`, and the test-only `PAYSTACK_SECRET_KEY` with the final Vercel production URL. Configure `TELEGRAM_BOT_TOKEN` with the bot token and `TELEGRAM_CHAT_ID` with the destination group ID. Keep the Telegram values, Paystack key, Resend credentials, and Supabase service-role key server-side in Render; never place them in Vercel frontend variables or source control. Render supplies `PORT` automatically. The Paystack webhook URL must point to the publicly reachable Render API, not Vercel or localhost.
 
 Supabase is used as Postgres through Drizzle. The schema is defined in `drizzle/schema.ts`, and reviewed generated migrations are stored in `supabase/migrations/`. For the external Supabase database, review the migration first and apply one file from a trusted environment with `node scripts/apply-supabase-migration.mjs supabase/migrations/<file>.sql`. Do not commit connection strings.
 
