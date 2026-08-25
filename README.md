@@ -286,6 +286,14 @@ The client now uses native `loading="lazy"` and `decoding="async"` for product i
 
 Cart additions and edits render optimistically and now reconcile from the final authoritative mutation response without an extra success-path cart fetch. Checkout clears the local bag and changes route before background order refreshes finish. Kitchen status changes update immediately with safe rollback and reconciliation. The Manager Console keeps its periodic reporting refresh but avoids a duplicate focus request.
 
+## QA remediation and release hardening
+
+**The Crunch Bite** is the approved public brand. The customer navigation exposes only ready destinations; Rewards remains available as a direct route but is intentionally absent from primary navigation until it has a real customer programme. The Menu defaults to an **All** filter, searches all live dishes, provides an accessible search name, gives mobile visitors a visible category swipe cue, and provides accessible cart controls on both viewport families.
+
+The Vercel fallback excludes `/assets/`, so an absent hashed route chunk returns a missing-asset response rather than HTML. The app detects lazy-import failures and presents a safe refresh action for a browser that still holds an older deployment. Production application routes emit CSP, `nosniff`, restrictive referrer/permissions settings, and anti-framing headers while keeping required Render, Supabase, and Paystack Test Mode connections available. See [QA remediation verification](./qa-remediation-verification.md) and [implementation sources](./qa-remediation-sources.md).
+
+The user-approved QA cleanup permanently removed the inactive image-upload verification dish, the Polling Test Customer test account, its two unpaid test orders, and its empty cart after exact dependency checks. No other production records were targeted.
+
 Render may still show cold-start latency on autoscaling/free hosting. If low-latency kitchen operations are required at all times, use an always-on service tier or an equivalent warm API deployment.
 
 ## GitHub workflow

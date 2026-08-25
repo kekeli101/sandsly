@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { filterLiveMenuItems } from "../client/src/lib/menu-filter";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const products = [
   { id: "boba", name: "Matcha Boba", description: "Tea", categorySlug: "boba", categoryName: "Boba", pricePesewas: 7500, imageUrl: "https://example.com/boba.jpg", badge: null, crunchLevel: 0, sortOrder: 1 },
@@ -13,5 +15,10 @@ describe("global live-menu search", () => {
 
   it("keeps category filtering explicit when a category is selected", () => {
     expect(filterLiveMenuItems(products, "boba", "pork")).toEqual([]);
+  });
+
+  it("keeps the desktop icon-only cart entry accessible", () => {
+    const source = readFileSync(resolve(process.cwd(), "client/src/pages/Menu.tsx"), "utf8");
+    expect(source).toContain('aria-label="Open cart"');
   });
 });

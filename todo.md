@@ -164,6 +164,7 @@
 - [x] Make menu search global across live dishes and improve category discovery on mobile.
 - [x] Replace Kitchen false-zero loading counters with an explicit operational loading state.
 - [x] Repair accessible names for search and desktop cart controls and verify keyboard-friendly customer navigation.
+- [x] Add the missing accessible name to the desktop cart icon and extend accessibility regression coverage.
 - [x] Add compatible production security headers without breaking Vercel, Supabase images, Paystack Test Mode, or API access.
 - [x] Add clear staff-entry and denied-route account-switch guidance without weakening role protection.
 - [x] Obtain explicit confirmation before permanently removing production QA menu/order/reporting artifacts or customer-related test records.
