@@ -7,7 +7,18 @@ import App from "./App";
 import { readApiSessionToken } from "./lib/api-session";
 import "./index.css";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 10 * 60_000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      retry: 1,
+    },
+    mutations: { retry: 0 },
+  },
+});
 const configuredApiUrl = (import.meta.env.VITE_API_URL ?? "").trim();
 const apiBaseUrl = (configuredApiUrl || (import.meta.env.DEV ? "" : "https://sandsly.onrender.com")).replace(/\/+$/, "");
 const trpcClient = trpc.createClient({

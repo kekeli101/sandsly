@@ -18,6 +18,7 @@ export type CartCacheApi = {
 export function createCartMutationLifecycle(cache: CartCacheApi) {
   const queuedProducts: CatalogProduct[] = [];
   let pendingAdds = 0;
+  let needsReconciliation = false;
 
   return {
     enqueue(product: CatalogProduct) {
@@ -34,12 +35,22 @@ export function createCartMutationLifecycle(cache: CartCacheApi) {
     },
     onError(context: OptimisticAddContext | undefined) {
       if (!context?.product) return;
+      needsReconciliation = true;
       if (pendingAdds <= 1) cache.setData(context.previous);
       else cache.setData(rollbackOptimisticAdd(cache.getData(), context.product.id));
     },
+    onSuccess(serverCart: CartSnapshot | undefined) {
+      if (pendingAdds <= 1 && serverCart) {
+        cache.setData(serverCart);
+        needsReconciliation = false;
+      }
+    },
     onSettled() {
       pendingAdds = Math.max(0, pendingAdds - 1);
-      if (pendingAdds === 0) void cache.invalidate();
+      if (pendingAdds === 0 && needsReconciliation) {
+        needsReconciliation = false;
+        void cache.invalidate();
+      }
     },
   };
 }

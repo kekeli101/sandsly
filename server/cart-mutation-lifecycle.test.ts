@@ -52,7 +52,21 @@ describe("CartContext optimistic mutation lifecycle", () => {
     expect(state.cache.invalidate).toHaveBeenCalledOnce();
   });
 
-  it("keeps two rapid additions ahead of stale cart reads and reconciles only after both settle", async () => {
+  it("uses the final successful response directly instead of adding a trailing cart fetch", async () => {
+    const state = createCache();
+    const lifecycle = createCartMutationLifecycle(state.cache);
+    lifecycle.enqueue(matcha);
+    await lifecycle.onMutate();
+    const serverCart = { items: [{ ...matcha, quantity: 1 }], subtotalPesewas: 7500, deliveryFeePesewas: 0, totalPesewas: 7500 };
+
+    lifecycle.onSuccess(serverCart);
+    lifecycle.onSettled();
+
+    expect(state.read()).toEqual(serverCart);
+    expect(state.cache.invalidate).not.toHaveBeenCalled();
+  });
+
+  it("keeps two rapid additions ahead of stale cart reads without an extra success-path refetch", async () => {
     const state = createCache();
     const lifecycle = createCartMutationLifecycle(state.cache);
     const completeStaleRead = state.startStaleRead();
@@ -71,6 +85,6 @@ describe("CartContext optimistic mutation lifecycle", () => {
     lifecycle.onSettled();
     expect(state.cache.invalidate).not.toHaveBeenCalled();
     lifecycle.onSettled();
-    expect(state.cache.invalidate).toHaveBeenCalledOnce();
+    expect(state.cache.invalidate).not.toHaveBeenCalled();
   });
 });

@@ -153,3 +153,7 @@
 - [x] Add a rendered finance workflow test for successful inventory, recipe, or expense mutation wiring and report invalidation.
 - [x] Complete authorization, calculation, and rendered-workflow regression coverage for the financial tracking extension.
 - [x] Validate the deployed admin workflow at desktop and phone-sized viewports, update documentation, and publish the finance extension.
+- [x] Profile customer, Kitchen, and Manager Console interaction, network, and render latency without creating operational data.
+- [x] Remove avoidable client-side waits, redundant requests, and rendering work while preserving order, payment, stock, and access-control correctness.
+- [x] Add performance regression coverage for the optimized high-frequency flows.
+- [ ] Validate the deployed mobile and desktop experience, update performance documentation, and publish the responsiveness release.

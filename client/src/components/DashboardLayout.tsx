@@ -29,14 +29,13 @@ export default function DashboardLayout({
   sidebarEyebrow = "Staff only",
   statusLabel = "Live kitchen",
 }: DashboardLayoutProps) {
-  const { loading, user } = useAuth();
+  const { loading, user, logout } = useAuth();
   if (loading) return <DashboardLayoutSkeleton />;
   if (!user) return <div className="flex min-h-screen items-center justify-center bg-[#111] text-[#fff7f2]"><div className="max-w-md p-8 text-center"><h1 className="font-display text-3xl font-black uppercase">Staff sign-in required</h1><p className="mt-3 text-sm text-[#bdb2ac]">Sign in with your Sandsly account to access this staff workspace.</p><Button onClick={() => { window.location.href = "/profile"; }} className="mt-6 bg-[#ff5a1f] text-[#17100d]">Go to sign in</Button></div></div>;
-  return <SidebarProvider style={{ "--sidebar-width": "250px" } as CSSProperties}><DashboardLayoutContent menuItems={menuItems} title={title} workspaceLabel={workspaceLabel} sidebarEyebrow={sidebarEyebrow} statusLabel={statusLabel}>{children}</DashboardLayoutContent></SidebarProvider>;
+  return <SidebarProvider style={{ "--sidebar-width": "250px" } as CSSProperties}><DashboardLayoutContent user={user} logout={logout} menuItems={menuItems} title={title} workspaceLabel={workspaceLabel} sidebarEyebrow={sidebarEyebrow} statusLabel={statusLabel}>{children}</DashboardLayoutContent></SidebarProvider>;
 }
 
-function DashboardLayoutContent({ children, menuItems, title, workspaceLabel, sidebarEyebrow, statusLabel }: Required<DashboardLayoutProps>) {
-  const { user, logout } = useAuth();
+function DashboardLayoutContent({ children, menuItems, title, workspaceLabel, sidebarEyebrow, statusLabel, user, logout }: Required<DashboardLayoutProps> & { user: NonNullable<ReturnType<typeof useAuth>["user"]>; logout: ReturnType<typeof useAuth>["logout"] }) {
   const [location, setLocation] = useLocation();
   const isMobile = useIsMobile();
   const activeMenuItem = menuItems.find((item) => item.path === location);

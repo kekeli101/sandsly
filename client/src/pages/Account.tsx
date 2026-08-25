@@ -22,6 +22,7 @@ import { formatGhsPesewas } from "@/lib/catalog-types";
 import { trpc } from "@/lib/trpc";
 import { saveApiSessionToken } from "@/lib/api-session";
 import { getKitchenProfileAccess } from "@/lib/kitchen-access";
+import { getOrderRefreshInterval } from "@/lib/order-refresh";
 import { PasswordVisibilityInput } from "@/components/PasswordVisibilityInput";
 
 function labelize(value: string) {
@@ -43,8 +44,8 @@ export default function Account() {
   const ordersQuery = trpc.storefront.orders.useQuery(undefined, {
     enabled: isAuthenticated,
     retry: false,
-    refetchInterval: isAuthenticated ? 15_000 : false,
-    refetchOnWindowFocus: true,
+    refetchInterval: (query) => getOrderRefreshInterval(query.state.data),
+    refetchOnWindowFocus: false,
   });
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [authView, setAuthView] = useState<"credentials" | "recovery">("credentials");
@@ -60,7 +61,6 @@ export default function Account() {
   const completeAuth = async (response: AuthenticatedResponse) => {
     saveApiSessionToken(response.accessToken);
     utils.auth.me.setData(undefined, response.user as NonNullable<typeof user>);
-    await utils.auth.me.invalidate();
     toast.success(authMode === "register" ? "Account created" : "Signed in");
   };
 

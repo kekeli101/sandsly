@@ -12,9 +12,9 @@ type PaymentMethod = "cash_on_pickup" | "cash_on_delivery" | "mobile_money" | "c
 
 export default function Cart() {
   const [, setLocation] = useLocation();
-  const { lines, subtotalPesewas, updateQuantity, removeItem, isLoading } = useCart();
+  const { lines, subtotalPesewas, updateQuantity, removeItem, isLoading, isAuthenticated } = useCart();
   const utils = trpc.useUtils();
-  const profileQuery = trpc.storefront.profile.useQuery();
+  const profileQuery = trpc.storefront.profile.useQuery(undefined, { enabled: isAuthenticated, retry: false, staleTime: 5 * 60_000 });
   const [orderType, setOrderType] = useState<OrderType>("pickup");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash_on_pickup");
   const [phone, setPhone] = useState("");
@@ -25,8 +25,10 @@ export default function Cart() {
   const total = subtotalPesewas + deliveryFee;
   const isOnlinePayment = paymentMethod === "mobile_money" || paymentMethod === "card";
   const checkoutMutation = trpc.storefront.checkout.useMutation({
-    onSuccess: async order => {
-      await Promise.all([utils.storefront.cart.invalidate(), utils.storefront.orders.invalidate()]);
+    onSuccess: order => {
+      utils.storefront.cart.setData(undefined, { items: [], subtotalPesewas: 0, deliveryFeePesewas: 0, totalPesewas: 0 });
+      void utils.storefront.cart.invalidate();
+      void utils.storefront.orders.invalidate();
       if ("paymentAuthorizationUrl" in order && order.paymentAuthorizationUrl) {
         toast.success("Opening secure Paystack test checkout", { description: "No real payment will be collected." });
         window.location.assign(order.paymentAuthorizationUrl);

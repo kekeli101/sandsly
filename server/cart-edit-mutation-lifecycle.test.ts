@@ -62,6 +62,19 @@ describe("optimistic cart editing", () => {
     expect(state.cache.invalidate).toHaveBeenCalledOnce();
   });
 
+  it("reconciles the final successful edit from its response without another cart query", async () => {
+    const state = createCache();
+    const lifecycle = createCartEditMutationLifecycle(state.cache);
+    const context = await lifecycle.onMutate({ productId: matcha.id, quantity: 2 });
+    const serverCart = { items: [{ ...matcha, quantity: 2 }, tiger], subtotalPesewas: 21500, deliveryFeePesewas: 0, totalPesewas: 21500 };
+
+    lifecycle.onSuccess(serverCart);
+    lifecycle.onSettled(context);
+
+    expect(state.read()).toEqual(serverCart);
+    expect(state.cache.invalidate).not.toHaveBeenCalled();
+  });
+
   it("blocks a stale cart result after rapid quantity changes", async () => {
     const state = createCache();
     const lifecycle = createCartEditMutationLifecycle(state.cache);

@@ -27,7 +27,7 @@ const CartContext = createContext<CartContextValue | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
-  const cartQuery = trpc.storefront.cart.useQuery(undefined, { enabled: isAuthenticated, retry: false });
+  const cartQuery = trpc.storefront.cart.useQuery(undefined, { enabled: isAuthenticated, retry: false, staleTime: 60_000, gcTime: 15 * 60_000, refetchOnWindowFocus: false, refetchOnReconnect: true });
   const refreshCart = () => utils.storefront.cart.invalidate();
   const addLifecycle = useMemo(() => createCartMutationLifecycle({
     cancel: () => utils.storefront.cart.cancel(),
@@ -43,6 +43,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }), [utils]);
   const addMutation = trpc.storefront.addToCart.useMutation({
     onMutate: () => addLifecycle.onMutate(),
+    onSuccess: (serverCart) => addLifecycle.onSuccess(serverCart),
     onError: (error, _input, context) => {
       const optimisticContext = context as OptimisticAddContext | undefined;
       addLifecycle.onError(optimisticContext);
@@ -52,6 +53,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   });
   const setQuantityMutation = trpc.storefront.setCartItemQuantity.useMutation({
     onMutate: (input) => editLifecycle.onMutate(input),
+    onSuccess: (serverCart) => editLifecycle.onSuccess(serverCart),
     onError: (error, _input, context) => {
       editLifecycle.onError(context as OptimisticCartEditContext | undefined);
       toast.error("Couldn’t update your bag", { description: error.message });

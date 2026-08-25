@@ -23,5 +23,5 @@ describe("Resend transactional-email credentials", () => {
     const configuredSenderIsVerified = payload.data?.some(domain => domain.name?.toLowerCase() === senderDomain && domain.status === "verified");
     const usingRestrictedOnboardingSender = from === "onboarding@resend.dev";
     expect(usingRestrictedOnboardingSender || configuredSenderIsVerified, "RESEND_FROM_EMAIL must use Resend’s restricted onboarding sender or a Resend-verified sending domain").toBe(true);
-  });
+  }, 12_000);
 });

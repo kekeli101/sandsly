@@ -8,6 +8,7 @@ export type OptimisticCartEditContext = { previous: CartSnapshot | undefined; ed
 export function createCartEditMutationLifecycle(cache: CartCacheApi) {
   const latestQuantityByProduct = new Map<string, number>();
   let pendingEdits = 0;
+  let needsReconciliation = false;
 
   return {
     async onMutate(edit: CartEditInput): Promise<OptimisticCartEditContext> {
@@ -20,14 +21,24 @@ export function createCartEditMutationLifecycle(cache: CartCacheApi) {
     },
     onError(context: OptimisticCartEditContext | undefined) {
       if (!context) return;
+      needsReconciliation = true;
       if (latestQuantityByProduct.get(context.edit.productId) === context.edit.quantity) {
         cache.setData(restoreCartLineFromSnapshot(cache.getData(), context.previous, context.edit.productId));
+      }
+    },
+    onSuccess(serverCart: CartSnapshot | undefined) {
+      if (pendingEdits <= 1 && serverCart) {
+        cache.setData(serverCart);
+        needsReconciliation = false;
       }
     },
     onSettled(context: OptimisticCartEditContext | undefined) {
       if (context && latestQuantityByProduct.get(context.edit.productId) === context.edit.quantity) latestQuantityByProduct.delete(context.edit.productId);
       pendingEdits = Math.max(0, pendingEdits - 1);
-      if (pendingEdits === 0) void cache.invalidate();
+      if (pendingEdits === 0 && needsReconciliation) {
+        needsReconciliation = false;
+        void cache.invalidate();
+      }
     },
   };
 }

@@ -33,9 +33,21 @@ export default function KitchenDashboard() {
   const [section, setSection] = useState<"orders" | "menu">("orders");
   const isKitchenStaff = user?.role === "kitchen" || user?.role === "admin";
   const utils = trpc.useUtils();
-  const ordersQuery = trpc.kitchen.orders.useQuery(undefined, { enabled: isKitchenStaff, retry: false, refetchInterval: isKitchenStaff ? 5000 : false, refetchOnWindowFocus: true });
+  const ordersQuery = trpc.kitchen.orders.useQuery(undefined, { enabled: isKitchenStaff, retry: false, refetchInterval: isKitchenStaff ? 5000 : false, refetchOnWindowFocus: false });
   const menuQuery = trpc.kitchen.menu.useQuery(undefined, { enabled: isKitchenStaff && section === "menu", retry: false, staleTime: 30_000 });
-  const statusMutation = trpc.kitchen.updateStatus.useMutation({ onSuccess: () => utils.kitchen.orders.invalidate(), onError: (error) => toast.error("Status update failed", { description: error.message }) });
+  const statusMutation = trpc.kitchen.updateStatus.useMutation({
+    onMutate: async input => {
+      await utils.kitchen.orders.cancel();
+      const previous = utils.kitchen.orders.getData();
+      utils.kitchen.orders.setData(undefined, orders => orders?.map(order => order.id === input.orderId ? { ...order, status: input.status } : order));
+      return { previous };
+    },
+    onError: (error, _input, context) => {
+      utils.kitchen.orders.setData(undefined, context?.previous);
+      toast.error("Status update failed", { description: error.message });
+    },
+    onSettled: () => { void utils.kitchen.orders.invalidate(); },
+  });
   const [form, setForm] = useState<MenuForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formMessage, setFormMessage] = useState("");

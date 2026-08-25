@@ -282,7 +282,9 @@ The automated suite covers authentication logout, password-reset token and recov
 
 The performance pass measured the live Vercel shell, catalog API, Render health endpoint, image payloads, and JavaScript bundle. The largest frontend issue was oversized generated food photography: the six expanded images were approximately 4.5–5.5 MB each. They were resized to 800×1000 JPEGs between approximately 93 and 155 KB.
 
-The client now uses native `loading="lazy"` and `decoding="async"` for product images, prioritizes only the Home hero, caches catalog queries for five minutes, and lazy-loads route pages. The initial JavaScript bundle decreased from approximately 791 kB minified to 636 kB minified, with Home, Menu, Cart, Account, and Kitchen Dashboard emitted as separate route chunks.
+The client now uses native `loading="lazy"` and `decoding="async"` for product images, prioritizes only the Home hero, caches catalog queries for five minutes, and lazy-loads route pages. Route-intent preloading prepares likely next customer and staff screens on pointer or keyboard intent, so navigation does not wait for a new route chunk after a committed tap. Recent query data is retained briefly to avoid redundant focus refreshes, while active Kitchen and customer orders continue their respective live updates.
+
+Cart additions and edits render optimistically and now reconcile from the final authoritative mutation response without an extra success-path cart fetch. Checkout clears the local bag and changes route before background order refreshes finish. Kitchen status changes update immediately with safe rollback and reconciliation. The Manager Console keeps its periodic reporting refresh but avoids a duplicate focus request.
 
 Render may still show cold-start latency on autoscaling/free hosting. If low-latency kitchen operations are required at all times, use an always-on service tier or an equivalent warm API deployment.
 
