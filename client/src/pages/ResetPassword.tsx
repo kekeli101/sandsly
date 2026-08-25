@@ -36,7 +36,7 @@ export default function ResetPassword() {
     <main className="min-h-screen bg-[#0b0b0b] px-5 py-14 text-[#fff7f2] sm:px-8 md:px-12 md:py-24">
       <div className="mx-auto max-w-[520px]">
         <span className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-[#ff5a1f] text-[#111111] shadow-[4px_4px_0_#000]"><KeyRound size={24} /></span>
-        <p className="mt-10 text-[10px] font-black uppercase tracking-[0.18em] text-[#ff5a1f]">Sandsly account security</p>
+        <p className="mt-10 text-[10px] font-black uppercase tracking-[0.18em] text-[#ff5a1f]">The Crunch Bite account security</p>
         <h1 className="mt-2 font-display text-[clamp(2.4rem,10vw,4.4rem)] font-black uppercase leading-[0.86] tracking-[-0.08em]">Set a new password.</h1>
         <p className="mt-6 max-w-[430px] text-[0.98rem] leading-7 text-[#bdb2ac]">Choose a new password with at least 8 characters. This secure link can be used once.</p>
         <form onSubmit={submit} className="mt-8 rounded-[15px] border border-[#48413e] bg-[#242424] p-5 shadow-[3px_3px_0_#050505]">

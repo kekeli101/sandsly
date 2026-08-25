@@ -157,3 +157,16 @@
 - [x] Remove avoidable client-side waits, redundant requests, and rendering work while preserving order, payment, stock, and access-control correctness.
 - [x] Add performance regression coverage for the optimized high-frequency flows.
 - [ ] Validate the deployed mobile and desktop experience, update performance documentation, and publish the responsiveness release.
+- [x] Prevent missing hashed frontend assets from being rewritten to the SPA shell and add controlled lazy-import recovery for stale clients.
+- [x] Confirm the intended public brand name before replacing inconsistent customer and staff identity copy.
+- [x] Standardize the approved The Crunch Bite brand across remaining Sandsly customer/account copy, metadata, and release documentation.
+- [x] Remove the unfinished Rewards feature from primary navigation until it has a real launch flow.
+- [x] Make menu search global across live dishes and improve category discovery on mobile.
+- [x] Replace Kitchen false-zero loading counters with an explicit operational loading state.
+- [x] Repair accessible names for search and desktop cart controls and verify keyboard-friendly customer navigation.
+- [x] Add compatible production security headers without breaking Vercel, Supabase images, Paystack Test Mode, or API access.
+- [x] Add clear staff-entry and denied-route account-switch guidance without weakening role protection.
+- [x] Obtain explicit confirmation before permanently removing production QA menu/order/reporting artifacts or customer-related test records.
+- [x] Inspect exact Image Upload Verification Dish and Polling Test Customer dependencies, then delete only the user-approved QA artifacts transactionally from production.
+- [ ] Add regression coverage and execute non-destructive desktop/mobile production QA for the remediated findings.
+- [ ] Update QA evidence, documentation, and publish the remediation release.

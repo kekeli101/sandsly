@@ -19,7 +19,7 @@ describe("account password UI contracts", () => {
     const source = readClientSource("pages/Account.tsx");
     expect(source).toContain('trpc.auth.requestPasswordReset.useMutation');
     expect(source).toContain('Forgot your password?');
-    expect(source).toContain('If an eligible Sandsly account matches that email');
+    expect(source).toContain('If an eligible Crunch Bite account matches that email');
     expect(source).toContain('role="status"');
     expect(source).not.toContain('No account exists for');
   });

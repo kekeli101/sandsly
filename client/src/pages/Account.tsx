@@ -15,7 +15,7 @@ import {
   Save,
   UserRound,
 } from "lucide-react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { formatGhsPesewas } from "@/lib/catalog-types";
@@ -38,7 +38,8 @@ type AuthenticatedResponse = {
 
 export default function Account() {
   const { user, isAuthenticated, logout } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const staffEntry = location === "/staff";
   const utils = trpc.useUtils();
   const profileQuery = trpc.storefront.profile.useQuery(undefined, { enabled: isAuthenticated, retry: false });
   const ordersQuery = trpc.storefront.orders.useQuery(undefined, {
@@ -62,6 +63,7 @@ export default function Account() {
     saveApiSessionToken(response.accessToken);
     utils.auth.me.setData(undefined, response.user as NonNullable<typeof user>);
     toast.success(authMode === "register" ? "Account created" : "Signed in");
+    if (staffEntry && (response.user.role === "kitchen" || response.user.role === "admin")) setLocation(response.user.role === "admin" ? "/admin" : "/kitchen");
   };
 
   const loginMutation = trpc.auth.login.useMutation({
@@ -116,6 +118,7 @@ export default function Account() {
         pending={loginMutation.isPending || registerMutation.isPending}
         recoveryPending={passwordRecoveryMutation.isPending}
         recoverySent={recoverySent}
+        staffEntry={staffEntry}
         requestPasswordReset={() => passwordRecoveryMutation.mutate({ email })}
         submit={() =>
           authMode === "register"
@@ -210,6 +213,7 @@ export default function Account() {
 function AuthScreen({
   authMode, setAuthMode, authView, setAuthView, name, setName, email, setEmail, password, setPassword,
   pending, recoveryPending, recoverySent, requestPasswordReset, submit,
+  staffEntry,
 }: {
   authMode: AuthMode;
   setAuthMode: (mode: AuthMode) => void;
@@ -226,27 +230,29 @@ function AuthScreen({
   recoverySent: boolean;
   requestPasswordReset: () => void;
   submit: () => void;
+  staffEntry: boolean;
 }) {
   return <div className="min-h-[calc(100vh-62px)] bg-[#0b0b0b] px-5 py-14 text-[#fff7f2] sm:px-8 md:min-h-screen md:px-12 md:py-24"><div className="mx-auto max-w-[620px]">
     <span className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-[#ff5a1f] text-[#111111] shadow-[4px_4px_0_#000]"><UserRound size={25} /></span>
-    <p className="mt-10 text-[10px] font-black uppercase tracking-[0.18em] text-[#ff5a1f]">Your Sandsly account</p>
-    <h1 className="mt-2 font-display text-[clamp(2.6rem,12vw,5rem)] font-black uppercase leading-[0.86] tracking-[-0.08em]">Order with confidence.</h1>
-    <p className="mt-6 max-w-[430px] text-[0.98rem] leading-7 text-[#bdb2ac]">Save your bag, delivery details, payment selection, and every order milestone.</p>
+    <p className="mt-10 text-[10px] font-black uppercase tracking-[0.18em] text-[#ff5a1f]">{staffEntry ? "Restaurant staff access" : "Your Crunch Bite account"}</p>
+    <h1 className="mt-2 font-display text-[clamp(2.6rem,12vw,5rem)] font-black uppercase leading-[0.86] tracking-[-0.08em]">{staffEntry ? "Operations sign-in." : "Order with confidence."}</h1>
+    <p className="mt-6 max-w-[430px] text-[0.98rem] leading-7 text-[#bdb2ac]">{staffEntry ? "Kitchen and manager accounts open their role-specific workspace immediately after sign-in." : "Save your bag, delivery details, payment selection, and every order milestone."}</p>
     <form onSubmit={event => { event.preventDefault(); authView === "recovery" ? requestPasswordReset() : submit(); }} className="mt-8 max-w-[420px] rounded-[15px] border border-[#48413e] bg-[#242424] p-5 shadow-[3px_3px_0_#050505]">
       {authView === "recovery" ? <>
-        <p className="text-sm leading-6 text-[#d9cec7]">Enter your email address. If it matches a local Sandsly account, we’ll send password-reset instructions.</p>
+        <p className="text-sm leading-6 text-[#d9cec7]">Enter your email address. If it matches a local Crunch Bite account, we’ll send password-reset instructions.</p>
         <Label label="Email"><input required value={email} onChange={event => setEmail(event.target.value)} type="email" autoComplete="email" /></Label>
-        {recoverySent && <p role="status" className="mt-4 rounded-[9px] border border-[#ff5a1f]/40 bg-[#ff5a1f]/10 px-3 py-3 text-sm leading-6 text-[#ffd1c2]">If an eligible Sandsly account matches that email, reset instructions have been sent. Check your inbox and spam folder.</p>}
+        {recoverySent && <p role="status" className="mt-4 rounded-[9px] border border-[#ff5a1f]/40 bg-[#ff5a1f]/10 px-3 py-3 text-sm leading-6 text-[#ffd1c2]">If an eligible Crunch Bite account matches that email, reset instructions have been sent. Check your inbox and spam folder.</p>}
         <button type="submit" disabled={recoveryPending} className="mt-5 inline-flex h-12 w-full items-center justify-center gap-3 rounded-[10px] bg-[#ff5a1f] px-5 text-xs font-black uppercase tracking-[0.16em] text-[#111111] shadow-[4px_4px_0_#000] disabled:opacity-60"><KeyRound size={17} /> {recoveryPending ? "Sending…" : "Send reset instructions"}</button>
         <button type="button" onClick={() => setAuthView("credentials")} className="mt-4 w-full text-center text-xs font-bold text-[#bdb2ac] underline decoration-[#ff5a1f]/60 underline-offset-4 hover:text-[#ffb09a]">Back to sign in</button>
       </> : <>
-        <div className="flex gap-2 rounded-[9px] bg-[#171717] p-1"><button type="button" onClick={() => setAuthMode("login")} className={`flex-1 rounded-[7px] py-2 text-[10px] font-black uppercase tracking-[0.12em] ${authMode === "login" ? "bg-[#ff5a1f] text-[#17100d]" : "text-[#a89d96]"}`}>Sign in</button><button type="button" onClick={() => setAuthMode("register")} className={`flex-1 rounded-[7px] py-2 text-[10px] font-black uppercase tracking-[0.12em] ${authMode === "register" ? "bg-[#ff5a1f] text-[#17100d]" : "text-[#a89d96]"}`}>Create account</button></div>
+        {!staffEntry && <div className="flex gap-2 rounded-[9px] bg-[#171717] p-1"><button type="button" onClick={() => setAuthMode("login")} className={`flex-1 rounded-[7px] py-2 text-[10px] font-black uppercase tracking-[0.12em] ${authMode === "login" ? "bg-[#ff5a1f] text-[#17100d]" : "text-[#a89d96]"}`}>Sign in</button><button type="button" onClick={() => setAuthMode("register")} className={`flex-1 rounded-[7px] py-2 text-[10px] font-black uppercase tracking-[0.12em] ${authMode === "register" ? "bg-[#ff5a1f] text-[#17100d]" : "text-[#a89d96]"}`}>Create account</button></div>}
         {authMode === "register" && <Label label="Name"><input required value={name} onChange={event => setName(event.target.value)} autoComplete="name" /></Label>}
         <Label label="Email"><input required value={email} onChange={event => setEmail(event.target.value)} type="email" autoComplete="email" /></Label>
         <Label label="Password"><PasswordVisibilityInput value={password} onChange={setPassword} autoComplete={authMode === "login" ? "current-password" : "new-password"} describedBy={authMode === "register" ? "password-requirements" : undefined} /></Label>
         {authMode === "register" && <p id="password-requirements" className="mt-2 text-xs leading-5 text-[#a89d96]">Use at least 8 characters.</p>}
         {authMode === "login" && <button type="button" onClick={() => setAuthView("recovery")} className="mt-4 text-left text-xs font-bold text-[#ffb09a] underline decoration-[#ff5a1f]/70 underline-offset-4 hover:text-[#fff7f2]">Forgot your password?</button>}
         <button type="submit" disabled={pending} className="mt-5 inline-flex h-12 items-center gap-3 rounded-[10px] bg-[#ff5a1f] px-5 text-xs font-black uppercase tracking-[0.16em] text-[#111111] shadow-[4px_4px_0_#000] disabled:opacity-60"><LogIn size={17} /> {pending ? "Working…" : authMode === "register" ? "Create account" : "Sign in"}</button>
+        <p className="mt-5 text-xs text-[#a89d96]">{staffEntry ? <Link href="/profile" className="font-bold text-[#ffb09a] underline decoration-[#ff5a1f]/70 underline-offset-4">Customer sign-in</Link> : <Link href="/staff" className="font-bold text-[#ffb09a] underline decoration-[#ff5a1f]/70 underline-offset-4">Restaurant staff sign-in</Link>}</p>
       </>}
     </form>
   </div></div>;

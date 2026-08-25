@@ -36,6 +36,7 @@ vi.mock("@/lib/kitchen-access", () => ({ getKitchenProfileAccess: () => ({ canUs
 vi.mock("wouter", () => ({
   useLocation: () => ["/profile", mocks.setLocation],
   useSearch: () => "token=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN0123456789",
+  Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
 }));
 vi.mock("sonner", () => ({ toast: { error: mocks.toastError, success: mocks.toastSuccess } }));
 
@@ -74,7 +75,7 @@ describe("rendered account password interactions", () => {
     await user.click(screen.getByRole("button", { name: "Send reset instructions" }));
 
     expect(mocks.requestPasswordReset).toHaveBeenCalledWith({ email: "missing@example.com" });
-    expect(screen.getByRole("status").textContent).toContain("If an eligible Sandsly account matches that email");
+    expect(screen.getByRole("status").textContent).toContain("If an eligible Crunch Bite account matches that email");
     expect(screen.queryByText("No account exists for this email")).toBeNull();
   });
 

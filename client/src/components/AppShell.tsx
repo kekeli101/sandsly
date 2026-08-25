@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Menu as MenuIcon, ShoppingCart, X } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
-import { isStorefrontRouteActive, storefrontNavigationItems } from "@/lib/storefront-navigation";
+import { getPrimaryOrderAction, isStorefrontRouteActive, storefrontNavigationItems } from "@/lib/storefront-navigation";
 import { preloadRoute } from "@/lib/route-preload";
 
 const markUrl = "/brand-mark.svg";
@@ -42,6 +42,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { itemCount } = useCart();
   const isActive = (href: string) => isStorefrontRouteActive(location, href);
   const navigate = (path: string) => { void preloadRoute(path); setLocation(path); };
+  const { destination: orderDestination, label: orderLabel } = getPrimaryOrderAction(itemCount);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#0b0b0b] text-[#f5eee9]">
@@ -50,7 +51,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <nav aria-label="Primary navigation" className="mt-14 flex flex-1 flex-col gap-2">
           <NavigationItems active={isActive} />
         </nav>
-        <button type="button" onPointerEnter={() => { void preloadRoute("/menu"); }} onFocus={() => { void preloadRoute("/menu"); }} onClick={() => navigate("/menu")} className="rounded-[12px] border border-[#ff5a1f] bg-transparent px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-[#ff5a1f] transition-all hover:bg-[#ff5a1f] hover:text-[#111111] active:scale-[0.97]">Order now</button>
+        <button type="button" onPointerEnter={() => { void preloadRoute(orderDestination); }} onFocus={() => { void preloadRoute(orderDestination); }} onClick={() => navigate(orderDestination)} className="rounded-[12px] border border-[#ff5a1f] bg-transparent px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-[#ff5a1f] transition-all hover:bg-[#ff5a1f] hover:text-[#111111] active:scale-[0.97]">{orderLabel}</button>
       </aside>
 
       <header className="sticky top-0 z-40 flex h-[62px] items-center justify-between border-b border-[#292727] bg-[#101010]/95 px-5 backdrop-blur-xl md:hidden">
@@ -75,7 +76,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <nav className="mt-12 flex flex-1 flex-col gap-2">
               <NavigationItems active={isActive} onNavigate={(href) => { setMobileMenuOpen(false); navigate(href); }} />
             </nav>
-            <button type="button" onPointerEnter={() => { void preloadRoute("/menu"); }} onFocus={() => { void preloadRoute("/menu"); }} onClick={() => { setMobileMenuOpen(false); navigate("/menu"); }} className="rounded-[12px] border border-[#ff5a1f] px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-[#ff5a1f] transition-all hover:bg-[#ff5a1f] hover:text-[#111111] active:scale-[0.97]">Order now</button>
+            <button type="button" onPointerEnter={() => { void preloadRoute(orderDestination); }} onFocus={() => { void preloadRoute(orderDestination); }} onClick={() => { setMobileMenuOpen(false); navigate(orderDestination); }} className="rounded-[12px] border border-[#ff5a1f] px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-[#ff5a1f] transition-all hover:bg-[#ff5a1f] hover:text-[#111111] active:scale-[0.97]">{orderLabel}</button>
           </aside>
         </div>
       )}
