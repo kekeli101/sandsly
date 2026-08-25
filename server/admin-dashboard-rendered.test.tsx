@@ -12,16 +12,21 @@ const snapshot = {
   dailySales: [{ day: "Aug 22", orderCount: 3, revenuePesewas: 30500 }],
   recentOrders: [{ id: 1, orderNumber: "CB-12345678-321", status: "preparing", orderType: "delivery", totalPesewas: 9500, customerName: "Ama Customer", paymentMethod: "card", paymentStatus: "pending" }],
   activeStatuses: ["pending", "accepted", "preparing", "ready", "out_for_delivery"],
+  profit: { cogsPesewas: 21000, inventoryWastePesewas: 1500, directCostPesewas: 22500, costedMenuRevenuePesewas: 83000, uncostedMenuRevenuePesewas: 43500, operatingExpensesPesewas: 12000, grossProfitPesewas: 104000, netProfitPesewas: 92000, grossMarginBasisPoints: 8221, netMarginBasisPoints: 7273, isComplete: false, lowStockCount: 2, inventoryValuePesewas: 28600 },
+  expenseBreakdown: [],
+  recentExpenses: [],
 };
+
+const financeSetup = { inventory: [], recipes: [], products: [], recentExpenses: [] };
 
 vi.mock("@/_core/hooks/useAuth", () => ({ useAuth: () => ({ user: { id: 1, name: "Restaurant Manager", role: "admin" }, loading: false }) }));
 vi.mock("@/components/DashboardLayout", () => ({ default: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
-vi.mock("@/lib/trpc", () => ({ trpc: { admin: { console: { useQuery: () => ({ data: snapshot, isLoading: false, isError: false, dataUpdatedAt: new Date("2026-08-22T12:00:00Z").getTime() }) } } } }));
+vi.mock("@/lib/trpc", () => ({ trpc: { useUtils: () => ({ admin: { financeSetup: { invalidate: vi.fn() }, console: { invalidate: vi.fn() } } }), admin: { console: { useQuery: () => ({ data: snapshot, isLoading: false, isError: false, dataUpdatedAt: new Date("2026-08-22T12:00:00Z").getTime() }) }, financeSetup: { useQuery: () => ({ data: financeSetup, isLoading: false, isError: false, refetch: vi.fn(), isFetching: false }) }, createInventoryItem: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) }, adjustInventory: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) }, replaceRecipe: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) }, createExpense: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) } } } }));
 
 import AdminDashboard from "../client/src/pages/AdminDashboard";
 
 describe("rendered owner/manager Admin Console", () => {
-  it("separates food, operations, and payment collection metrics without presenting sales as profit", () => {
+  it("shows recorded COGS and keeps profit margins explicitly partial until recipe-cost coverage is complete", () => {
     render(<AdminDashboard />);
 
     expect(screen.getByRole("heading", { name: /manager\s*console/i })).toBeTruthy();
@@ -31,6 +36,12 @@ describe("rendered owner/manager Admin Console", () => {
     expect(screen.getByText("Top selling dishes")).toBeTruthy();
     expect(screen.getByText("Matcha Cloud Boba")).toBeTruthy();
     expect(screen.getByText("Payment method & status")).toBeTruthy();
-    expect(screen.getByText(/does not yet store profit/i)).toBeTruthy();
+    expect(screen.getByText("COGS & recorded waste")).toBeTruthy();
+    expect(screen.getByText("Gross result (partial)")).toBeTruthy();
+    expect(screen.getByText("Net result (partial)")).toBeTruthy();
+    expect(screen.getByText(/true gross and net margins stay marked as incomplete/i)).toBeTruthy();
+    expect(screen.getByText("Inventory & expenses")).toBeTruthy();
+    expect(screen.getByText("Add inventory")).toBeTruthy();
+    expect(screen.getByText("Cost coverage")).toBeTruthy();
   });
 });

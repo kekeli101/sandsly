@@ -63,6 +63,38 @@ export const products = pgTable("products", {
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("products_category_active_idx").on(table.categoryId, table.isActive)]);
 
+/** Inventory quantities are stored in thousandths of the selected measurement unit. */
+export const inventoryUnitValues = ["g", "ml", "each", "pack"] as const;
+export const inventoryUnitEnum = pgEnum("inventory_unit", inventoryUnitValues);
+export const inventoryItems = pgTable("inventoryItems", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 160 }).notNull(),
+  unit: inventoryUnitEnum("unit").notNull().default("g"),
+  currentQuantityMilliunits: integer("currentQuantityMilliunits").notNull().default(0),
+  reorderPointMilliunits: integer("reorderPointMilliunits").notNull().default(0),
+  /** Current per-unit cost in pesewas; changes do not rewrite historical order costs. */
+  unitCostPesewas: integer("unitCostPesewas").notNull().default(0),
+  isActive: boolean("isActive").notNull().default(true),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("inventory_items_name_lower_unique").on(sql`lower(${table.name})`), index("inventory_items_active_idx").on(table.isActive)]);
+
+/** Recipe lines express the measured inventory consumption required for one sold menu item. */
+export const productRecipes = pgTable("productRecipes", {
+  id: serial("id").primaryKey(),
+  productId: varchar("productId", { length: 64 }).notNull().references(() => products.id, { onDelete: "cascade" }),
+  inventoryItemId: integer("inventoryItemId").notNull().references(() => inventoryItems.id),
+  quantityMilliunits: integer("quantityMilliunits").notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("product_recipes_product_inventory_unique").on(table.productId, table.inventoryItemId), index("product_recipes_product_idx").on(table.productId)]);
+
+export const inventoryAdjustmentReasonValues = ["opening_count", "purchase", "waste", "correction", "order_usage"] as const;
+export const inventoryAdjustmentReasonEnum = pgEnum("inventory_adjustment_reason", inventoryAdjustmentReasonValues);
+
+export const expenseCategoryValues = ["rent", "utilities", "payroll", "marketing", "delivery", "maintenance", "other"] as const;
+export const expenseCategoryEnum = pgEnum("expense_category", expenseCategoryValues);
+
 /** A customer owns one live cart. Checkout clears its items while keeping the cart record reusable. */
 export const carts = pgTable("carts", {
   id: serial("id").primaryKey(),
@@ -138,8 +170,45 @@ export const orderItems = pgTable("orderItems", {
   unitPricePesewas: integer("unitPricePesewas").notNull(),
   quantity: integer("quantity").notNull(),
   lineTotalPesewas: integer("lineTotalPesewas").notNull(),
+  /** True only when a recipe-cost snapshot was recorded at checkout. */
+  isCosted: boolean("isCosted").notNull().default(false),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("order_items_order_idx").on(table.orderId)]);
+
+/** Immutable per-order ingredient-cost snapshot used for COGS, independent of later supplier price changes. */
+export const orderIngredientUsage = pgTable("orderIngredientUsage", {
+  id: serial("id").primaryKey(),
+  orderItemId: integer("orderItemId").notNull().references(() => orderItems.id, { onDelete: "cascade" }),
+  inventoryItemId: integer("inventoryItemId").notNull().references(() => inventoryItems.id),
+  quantityMilliunits: integer("quantityMilliunits").notNull(),
+  unitCostPesewas: integer("unitCostPesewas").notNull(),
+  totalCostPesewas: integer("totalCostPesewas").notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("order_ingredient_usage_line_inventory_unique").on(table.orderItemId, table.inventoryItemId), index("order_ingredient_usage_inventory_idx").on(table.inventoryItemId)]);
+
+/** Append-only stock movements provide a reconciliable audit trail. */
+export const inventoryAdjustments = pgTable("inventoryAdjustments", {
+  id: serial("id").primaryKey(),
+  inventoryItemId: integer("inventoryItemId").notNull().references(() => inventoryItems.id),
+  orderItemId: integer("orderItemId").references(() => orderItems.id, { onDelete: "cascade" }),
+  reason: inventoryAdjustmentReasonEnum("reason").notNull(),
+  quantityDeltaMilliunits: integer("quantityDeltaMilliunits").notNull(),
+  unitCostPesewas: integer("unitCostPesewas"),
+  note: varchar("note", { length: 280 }),
+  createdByUserId: integer("createdByUserId").references(() => users.id),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("inventory_adjustments_order_line_unique").on(table.orderItemId, table.inventoryItemId), index("inventory_adjustments_inventory_created_idx").on(table.inventoryItemId, table.createdAt)]);
+
+/** Operating expenses are deliberately separate from inventory purchases to avoid double-counting COGS. */
+export const expenses = pgTable("expenses", {
+  id: serial("id").primaryKey(),
+  category: expenseCategoryEnum("category").notNull(),
+  description: varchar("description", { length: 240 }).notNull(),
+  amountPesewas: integer("amountPesewas").notNull(),
+  occurredAt: timestamp("occurredAt", { withTimezone: true }).notNull(),
+  createdByUserId: integer("createdByUserId").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("expenses_occurred_at_idx").on(table.occurredAt), index("expenses_category_occurred_idx").on(table.category, table.occurredAt)]);
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -148,3 +217,6 @@ export type OrderStatus = (typeof orderStatusValues)[number];
 export type OrderType = (typeof orderTypeValues)[number];
 export type PaymentMethod = (typeof paymentMethodValues)[number];
 export type PaymentStatus = (typeof paymentStatusValues)[number];
+export type InventoryUnit = (typeof inventoryUnitValues)[number];
+export type InventoryAdjustmentReason = (typeof inventoryAdjustmentReasonValues)[number];
+export type ExpenseCategory = (typeof expenseCategoryValues)[number];

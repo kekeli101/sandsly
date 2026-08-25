@@ -145,3 +145,11 @@
 - [x] Diagnose and repair the Vercel-to-Render session forwarding mismatch that leaves an authenticated browser session forbidden from `admin.console`.
 - [x] Replace the unreliable cross-host cookie dependency with a secure, bounded standalone authorization transport for the Vercel storefront and Render API.
 - [x] Add and verify a discoverable admin-only Manager Console entry point from Profile or staff navigation, with visibility regression coverage.
+- [x] Define inventory, recipe-cost, expense, and profit-reporting data structures with transparent calculation boundaries.
+- [x] Add admin-only persistence and API operations for inventory items, stock adjustments, recipe costs, and operating expenses.
+- [x] Calculate period COGS, gross profit, operating expenses, net profit, and profit margins only from recorded data.
+- [x] Build mobile-first Manager Console inventory, expense, and profit-reporting controls with clear empty and incomplete-data states.
+- [x] Add JSDOM interaction tests for Finance Controls tab switching, validation feedback, and empty states.
+- [x] Add a rendered finance workflow test for successful inventory, recipe, or expense mutation wiring and report invalidation.
+- [x] Complete authorization, calculation, and rendered-workflow regression coverage for the financial tracking extension.
+- [ ] Validate the deployed admin workflow at desktop and phone-sized viewports, update documentation, and publish the finance extension.

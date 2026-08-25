@@ -16,7 +16,7 @@ Sandsly is a mobile-first restaurant ordering platform for **The Crunch Bite**, 
 | Customer tracking | Live-refreshing Profile order cards with item details, payment state, fulfillment type, and a status timeline |
 | Kitchen Board | Kitchen/Admin-only access with Active and Finished tabs, pickup/delivery-aware status transitions, payment context, delivery details, and five-second polling |
 | Admin dashboard | Admin-only `/admin` reporting for order totals, active/finished counts, completed sales, customer count, popular dishes, and recent orders |
-| Manager Console | Admin-only `/admin` control center for fulfilled sales, provider-verified online collection, cash reconciliation, kitchen attention items, seven-day fulfilled-revenue trend, menu health, top dishes, payment ledger, and recent orders |
+| Manager Console | Admin-only `/admin` control center for fulfilled sales, provider-verified online collection, cash reconciliation, kitchen attention items, seven-day fulfilled-revenue trend, menu health, top dishes, payment ledger, inventory, recipe costs, operating expenses, and profit-readiness reporting |
 | Telegram | Cash orders are sent after checkout; online orders are sent only after a Paystack-verified payment succeeds |
 | Performance | Compressed product photography, native lazy loading, catalog caching, and route-level JavaScript splitting |
 
@@ -160,8 +160,25 @@ The owner/manager Console is available at `/admin` only to authenticated `admin`
 | Cash to reconcile | Finished cash-method orders. This is an operational cash collection queue, not an assertion that the cash has been banked. |
 | Food performance | Quantity, fulfilled-order count, and preserved line-item revenue for top dishes on completed or delivered orders. |
 | Payment ledger | Order count and recorded amount grouped by payment method and persisted payment status. |
+| Recipe COGS | Immutable ingredient-cost snapshots captured from the current recipe and supplier unit cost when a new order is created, then included only after that order is fulfilled. |
+| Recorded waste | Inventory written off through a waste adjustment, valued at the recorded unit cost and included in direct food costs. |
+| Operating expenses | Recorded rent, utilities, payroll, marketing, delivery, maintenance, and other operating costs. Supplier stock purchases are excluded here because they become COGS as a recipe is sold. |
+| Gross / net profit | Fulfilled sales less direct food costs, then less recorded operating expenses. Margins are shown only when every fulfilled menu line has an immutable cost snapshot. |
 
-> **Financial boundary:** The Console does not calculate profit. Ingredient inventory, supplier bills, food costs, payroll, expenses, refunds outside recorded payment state, and cash deposits are not yet persisted in Sandsly. It therefore displays sales and collection state rather than an estimated profit figure.
+> **Profit accuracy boundary:** Sandsly does not invent historical ingredient costs. A margin remains **partial** when any fulfilled menu line predates a recorded recipe-cost snapshot. This prevents old sales from being misrepresented as true profit. After inventory and recipes are configured, new orders retain their own cost snapshots even if supplier prices change later.
+
+### Inventory, expenses, and profit workflow
+
+Administrators open `/admin` and use **Inventory & expenses** to establish opening stock, measurement units, reorder thresholds, and current supplier unit costs. A recipe then defines the measured stock used for one serving of each menu item. When a customer submits a new order, the system records the recipe quantities and then-current unit costs with that order; when Kitchen moves it into `preparing`, stock usage is appended to the inventory audit trail exactly once.
+
+| Manager action | Where to record it | Reporting treatment |
+| --- | --- | --- |
+| Starting count or supplier restock | **Stock** → Add inventory or Record adjustment | Increases on-hand stock; supplier unit cost becomes the current cost for later recipes. It is not an operating expense. |
+| Spoilage, damaged stock, or measured waste | **Stock** → Record adjustment → Waste | Reduces on-hand stock and contributes to recorded direct food costs. |
+| Ingredient quantities for one serving | **Recipes** → Set recipe cost | Enables immutable COGS snapshots for future orders of that dish. |
+| Rent, utilities, payroll, marketing, delivery, maintenance, or other overhead | **Expenses** → Record expense | Reduces recorded net profit; it does not change inventory. |
+
+The Console presents **COGS & recorded waste**, gross result/profit, operating expenses, and net result/profit in Ghana cedis. It labels the result as partial until cost coverage is complete, shows stock value and reorder alerts, and continues to report cash awaiting reconciliation separately from online provider-verified collection. Do not add the same supplier restock as both stock and an operating expense, because that would count its cost twice.
 
 ## Telegram order notifications
 
@@ -188,7 +205,7 @@ The webhook verifies Paystack’s `x-paystack-signature` HMAC-SHA512 against the
 
 ### Supabase
 
-Create or use a Supabase PostgreSQL project, obtain its connection string, and apply the reviewed migrations. Seed the catalog with `scripts/seed-supabase.mjs`. The database stores users, categories, products, carts, cart items, orders, order items, payments, delivery details, and append-only order-status history.
+Create or use a Supabase PostgreSQL project, obtain its connection string, and apply the reviewed migrations. Seed the catalog with `scripts/seed-supabase.mjs`. The database stores users, categories, products, carts, cart items, orders, order items, payments, delivery details, append-only order-status history, inventory, recipes, inventory adjustments, order ingredient-cost snapshots, and operating expenses.
 
 ### Render API
 
@@ -242,6 +259,7 @@ After deployment, verify the following in order:
 7. The customer Profile renders order status history, item details, fulfillment type, and payment state.
 8. Kitchen/Admin staff can select a JPEG, PNG, or WebP image from their device in **Manage menu**, save the item, and see the image in the customer catalog.
 9. The Telegram group receives the order number, items, total, fulfillment type, payment state, and required delivery details.
+10. An admin can record opening inventory, a recipe, and an operating expense at `/admin`; confirm the default empty states do not claim a complete profit margin before cost coverage exists.
 
 See [`STANDALONE_SETUP.md`](./STANDALONE_SETUP.md) for migration and deployment details already used for the external release.
 
@@ -258,7 +276,7 @@ See [`STANDALONE_SETUP.md`](./STANDALONE_SETUP.md) for migration and deployment 
 | `node scripts/seed-supabase.mjs` | Apply the idempotent catalog seed |
 | `node scripts/apply-supabase-migration.mjs supabase/migrations/<file>.sql` | Apply one reviewed migration to the external Supabase database |
 
-The automated suite covers authentication logout, password-reset token and recovery behavior, Resend credential/configuration checks, role access, customer catalog visibility, pickup and delivery kitchen transitions, storefront checkout, Supabase database and Storage connectivity, Kitchen-only menu image uploads and image-type validation, Telegram credentials, and Telegram message formatting/delivery.
+The automated suite covers authentication logout, password-reset token and recovery behavior, Resend credential/configuration checks, role access, customer catalog visibility, pickup and delivery kitchen transitions, storefront checkout, Supabase database and Storage connectivity, Kitchen-only menu image uploads and image-type validation, Telegram credentials, Telegram message formatting/delivery, Manager Console authorization, recorded-profit calculation boundaries, partial-margin safeguards, and inventory/expense control rendering.
 
 ## Performance practices
 
@@ -304,4 +322,5 @@ The repository contains supporting records for the completed release:
 - [`verification-password-recovery.md`](./verification-password-recovery.md) records account-password and recovery interface verification.
 - [`verification-paystack-webhook.md`](./verification-paystack-webhook.md) records Test Mode webhook dashboard, endpoint-health, and defensive-ingress verification.
 - [`verification-manager-console.md`](./verification-manager-console.md) records protected-route visual review, role coverage, and the finance-reporting boundary.
+- [`verification-manager-finance.md`](./verification-manager-finance.md) records inventory, recipe-cost, operating-expense, profit-readiness, authorization, and mobile control verification.
 - [`todo.md`](./todo.md) preserves the implementation and verification history.

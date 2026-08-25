@@ -1,18 +1,25 @@
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
 import postgres from "postgres";
 import {
   cartItems,
   carts,
   categories,
   customerProfiles,
+  expenses,
+  inventoryAdjustments,
+  inventoryItems,
+  orderIngredientUsage,
   type InsertUser,
   orderItems,
   orderStatusHistory,
   orders,
   payments,
+  productRecipes,
   products,
+  type ExpenseCategory,
+  type InventoryAdjustmentReason,
+  type InventoryUnit,
   type OrderStatus,
   type OrderType,
   type PaymentMethod,
@@ -21,6 +28,7 @@ import {
 import { calculateOrderTotals } from "./storefront-utils";
 import { isValidKitchenTransition } from "./kitchen-utils";
 import { filterCustomerCatalogProducts } from "./catalog-utils";
+import { calculateRecordedProfit } from "./finance-utils";
 
 const DELIVERY_FEE_PESEWAS = 2000;
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -190,6 +198,89 @@ export async function setMenuProductActive(productId: string, isActive: boolean)
   return updateMenuProduct(productId, { isActive });
 }
 
+export type InventoryItemInput = {
+  name: string;
+  unit: InventoryUnit;
+  currentQuantityMilliunits: number;
+  reorderPointMilliunits: number;
+  unitCostPesewas: number;
+};
+
+/** Manager-only setup data; quantities remain in milliunits to keep stock and COGS integer-safe. */
+export async function listFinanceManagementData() {
+  const db = await requireDb();
+  const inventory = await db.select({
+    id: inventoryItems.id, name: inventoryItems.name, unit: inventoryItems.unit,
+    currentQuantityMilliunits: inventoryItems.currentQuantityMilliunits,
+    reorderPointMilliunits: inventoryItems.reorderPointMilliunits,
+    unitCostPesewas: inventoryItems.unitCostPesewas, isActive: inventoryItems.isActive,
+  }).from(inventoryItems).orderBy(asc(inventoryItems.name));
+  const recipes = await db.select({
+    productId: productRecipes.productId, productName: products.name, inventoryItemId: productRecipes.inventoryItemId,
+    inventoryItemName: inventoryItems.name, unit: inventoryItems.unit, quantityMilliunits: productRecipes.quantityMilliunits,
+  }).from(productRecipes).innerJoin(products, eq(productRecipes.productId, products.id))
+    .innerJoin(inventoryItems, eq(productRecipes.inventoryItemId, inventoryItems.id)).orderBy(asc(products.name), asc(inventoryItems.name));
+  const productsForRecipes = await db.select({ id: products.id, name: products.name, isActive: products.isActive })
+    .from(products).orderBy(asc(products.name));
+  const recentExpenses = await db.select({
+    id: expenses.id, category: expenses.category, description: expenses.description, amountPesewas: expenses.amountPesewas, occurredAt: expenses.occurredAt,
+  }).from(expenses).orderBy(desc(expenses.occurredAt), desc(expenses.id)).limit(20);
+  return { inventory, recipes, products: productsForRecipes, recentExpenses };
+}
+
+export async function createInventoryItem(input: InventoryItemInput, createdByUserId: number) {
+  const db = await requireDb();
+  return db.transaction(async (tx) => {
+    const [item] = await tx.insert(inventoryItems).values(input).returning();
+    if (input.currentQuantityMilliunits !== 0) {
+      await tx.insert(inventoryAdjustments).values({
+        inventoryItemId: item.id, reason: "opening_count", quantityDeltaMilliunits: input.currentQuantityMilliunits,
+        unitCostPesewas: input.unitCostPesewas, note: "Opening inventory count", createdByUserId,
+      });
+    }
+    return item;
+  });
+}
+
+export async function recordInventoryAdjustment(input: {
+  inventoryItemId: number;
+  reason: Exclude<InventoryAdjustmentReason, "order_usage">;
+  quantityDeltaMilliunits: number;
+  unitCostPesewas?: number;
+  note?: string;
+}, createdByUserId: number) {
+  const db = await requireDb();
+  return db.transaction(async (tx) => {
+    const item = (await tx.select().from(inventoryItems).where(eq(inventoryItems.id, input.inventoryItemId)).limit(1))[0];
+    if (!item) throw new Error("Inventory item not found");
+    const [updated] = await tx.update(inventoryItems).set({
+      currentQuantityMilliunits: sql`${inventoryItems.currentQuantityMilliunits} + ${input.quantityDeltaMilliunits}`,
+      unitCostPesewas: input.unitCostPesewas ?? item.unitCostPesewas,
+      updatedAt: new Date(),
+    }).where(eq(inventoryItems.id, input.inventoryItemId)).returning();
+    await tx.insert(inventoryAdjustments).values({
+      inventoryItemId: input.inventoryItemId, reason: input.reason, quantityDeltaMilliunits: input.quantityDeltaMilliunits,
+      unitCostPesewas: input.unitCostPesewas ?? null, note: input.note?.trim() || null, createdByUserId,
+    });
+    return updated;
+  });
+}
+
+export async function replaceProductRecipe(productId: string, ingredients: Array<{ inventoryItemId: number; quantityMilliunits: number }>) {
+  const db = await requireDb();
+  return db.transaction(async (tx) => {
+    await tx.delete(productRecipes).where(eq(productRecipes.productId, productId));
+    if (ingredients.length) await tx.insert(productRecipes).values(ingredients.map((ingredient) => ({ productId, ...ingredient })));
+    return { productId, ingredientCount: ingredients.length };
+  });
+}
+
+export async function createExpense(input: { category: ExpenseCategory; description: string; amountPesewas: number; occurredAt: Date }, createdByUserId: number) {
+  const db = await requireDb();
+  const [expense] = await db.insert(expenses).values({ ...input, createdByUserId }).returning();
+  return expense;
+}
+
 async function getOrCreateCart(userId: number) {
   const db = await requireDb();
   let cart = (await db.select().from(carts).where(eq(carts.userId, userId)).limit(1))[0];
@@ -280,10 +371,27 @@ export async function createOrderFromCart(userId: number, input: CheckoutInput) 
     }).returning({ id: orders.id });
     await tx.insert(payments).values({ orderId: created.id, method: input.paymentMethod, status: "pending", amountPesewas: totals.totalPesewas });
     await tx.insert(orderStatusHistory).values({ orderId: created.id, previousStatus: null, nextStatus: "pending", changedByUserId: userId });
-    await tx.insert(orderItems).values(lines.map((line) => ({
+    const recipeRows = await tx.select({
+      productId: productRecipes.productId, inventoryItemId: productRecipes.inventoryItemId,
+      quantityMilliunits: productRecipes.quantityMilliunits, unitCostPesewas: inventoryItems.unitCostPesewas,
+    }).from(productRecipes).innerJoin(inventoryItems, eq(productRecipes.inventoryItemId, inventoryItems.id))
+      .where(inArray(productRecipes.productId, lines.map((line) => line.id)));
+    const recipeByProduct = new Map<string, typeof recipeRows>();
+    for (const recipe of recipeRows) recipeByProduct.set(recipe.productId, [...(recipeByProduct.get(recipe.productId) ?? []), recipe]);
+    const insertedOrderItems = await tx.insert(orderItems).values(lines.map((line) => ({
       orderId: created.id, productId: line.id, productName: line.name, unitPricePesewas: line.pricePesewas,
       quantity: line.quantity, lineTotalPesewas: line.pricePesewas * line.quantity,
-    })));
+      isCosted: (recipeByProduct.get(line.id)?.length ?? 0) > 0,
+    }))).returning({ id: orderItems.id, productId: orderItems.productId, quantity: orderItems.quantity, isCosted: orderItems.isCosted });
+    const usageSnapshots = insertedOrderItems.flatMap((line) => (recipeByProduct.get(line.productId) ?? []).map((recipe) => {
+      const quantityMilliunits = recipe.quantityMilliunits * line.quantity;
+      return {
+        orderItemId: line.id, inventoryItemId: recipe.inventoryItemId, quantityMilliunits,
+        unitCostPesewas: recipe.unitCostPesewas,
+        totalCostPesewas: Math.round(recipe.unitCostPesewas * quantityMilliunits / 1000),
+      };
+    }));
+    if (usageSnapshots.length) await tx.insert(orderIngredientUsage).values(usageSnapshots);
     await tx.delete(cartItems).where(eq(cartItems.cartId, cart.id));
     return {
       id: created.id,
@@ -507,6 +615,25 @@ export async function getManagerConsoleData() {
       activeProducts: sql<number>`count(*) filter (where ${products.isActive} = true)::int`,
       inactiveProducts: sql<number>`count(*) filter (where ${products.isActive} = false)::int`,
     }).from(products);
+  const costCoverage = await db.select({
+      costedMenuRevenuePesewas: sql<number>`coalesce(sum(${orderItems.lineTotalPesewas}) filter (where ${orderItems.isCosted} = true), 0)::int`,
+      uncostedMenuRevenuePesewas: sql<number>`coalesce(sum(${orderItems.lineTotalPesewas}) filter (where ${orderItems.isCosted} = false), 0)::int`,
+    }).from(orderItems).innerJoin(orders, eq(orderItems.orderId, orders.id)).where(inArray(orders.status, fulfilledStatuses));
+  const cogsSummary = await db.select({
+      cogsPesewas: sql<number>`coalesce(sum(${orderIngredientUsage.totalCostPesewas}), 0)::int`,
+    }).from(orderIngredientUsage).innerJoin(orderItems, eq(orderIngredientUsage.orderItemId, orderItems.id))
+      .innerJoin(orders, eq(orderItems.orderId, orders.id)).where(inArray(orders.status, fulfilledStatuses));
+  const expenseSummary = await db.select({ totalExpensePesewas: sql<number>`coalesce(sum(${expenses.amountPesewas}), 0)::int` }).from(expenses);
+  const wasteSummary = await db.select({
+      inventoryWastePesewas: sql<number>`coalesce(sum(round(-${inventoryAdjustments.quantityDeltaMilliunits} * ${inventoryAdjustments.unitCostPesewas} / 1000.0)), 0)::int`,
+    }).from(inventoryAdjustments).where(and(eq(inventoryAdjustments.reason, "waste"), sql`${inventoryAdjustments.quantityDeltaMilliunits} < 0`));
+  const expenseBreakdown = await db.select({
+      category: expenses.category, amountPesewas: sql<number>`coalesce(sum(${expenses.amountPesewas}), 0)::int`,
+    }).from(expenses).groupBy(expenses.category).orderBy(desc(sql`sum(${expenses.amountPesewas})`));
+  const inventorySummary = await db.select({
+      lowStockCount: sql<number>`count(*) filter (where ${inventoryItems.isActive} = true and ${inventoryItems.reorderPointMilliunits} > 0 and ${inventoryItems.currentQuantityMilliunits} <= ${inventoryItems.reorderPointMilliunits})::int`,
+      inventoryValuePesewas: sql<number>`coalesce(sum(round(${inventoryItems.currentQuantityMilliunits} * ${inventoryItems.unitCostPesewas} / 1000.0)), 0)::int`,
+    }).from(inventoryItems);
   const paymentBreakdown = await db.select({
       method: payments.method,
       status: payments.status,
@@ -533,6 +660,20 @@ export async function getManagerConsoleData() {
     }).from(orders).where(and(inArray(orders.status, fulfilledStatuses), sql`${orders.updatedAt} >= now() - interval '6 days'`))
       .groupBy(sql`date_trunc('day', ${orders.updatedAt})`).orderBy(sql`date_trunc('day', ${orders.updatedAt})`);
   const recentOrders = await listRecentOrdersForAdmin();
+  const recentExpenses = await db.select({ id: expenses.id, category: expenses.category, description: expenses.description, amountPesewas: expenses.amountPesewas, occurredAt: expenses.occurredAt })
+    .from(expenses).orderBy(desc(expenses.occurredAt), desc(expenses.id)).limit(5);
+  const coveredMenuRevenue = costCoverage[0]?.costedMenuRevenuePesewas ?? 0;
+  const uncostedMenuRevenue = costCoverage[0]?.uncostedMenuRevenuePesewas ?? 0;
+  const fulfilledSales = orderSummary[0]?.fulfilledSalesPesewas ?? 0;
+  const cogs = cogsSummary[0]?.cogsPesewas ?? 0;
+  const operatingExpenses = expenseSummary[0]?.totalExpensePesewas ?? 0;
+  const recordedProfit = calculateRecordedProfit({
+    fulfilledSalesPesewas: fulfilledSales,
+    recipeCogsPesewas: cogs,
+    inventoryWastePesewas: wasteSummary[0]?.inventoryWastePesewas ?? 0,
+    operatingExpensesPesewas: operatingExpenses,
+    uncostedMenuRevenuePesewas: uncostedMenuRevenue,
+  });
 
   return {
     summary: {
@@ -546,6 +687,23 @@ export async function getManagerConsoleData() {
       failedOrRefundedOnlinePesewas: 0, failedOrRefundedOnlineCount: 0,
       cashFulfilledToReconcilePesewas: 0, cashFulfilledToReconcileCount: 0,
     },
+    profit: {
+      cogsPesewas: cogs,
+      costedMenuRevenuePesewas: coveredMenuRevenue,
+      uncostedMenuRevenuePesewas: uncostedMenuRevenue,
+      operatingExpensesPesewas: operatingExpenses,
+      inventoryWastePesewas: recordedProfit.inventoryWastePesewas,
+      directCostPesewas: recordedProfit.directCostPesewas,
+      grossProfitPesewas: recordedProfit.grossProfitPesewas,
+      netProfitPesewas: recordedProfit.netProfitPesewas,
+      grossMarginBasisPoints: recordedProfit.grossMarginBasisPoints,
+      netMarginBasisPoints: recordedProfit.netMarginBasisPoints,
+      isComplete: recordedProfit.isComplete,
+      lowStockCount: inventorySummary[0]?.lowStockCount ?? 0,
+      inventoryValuePesewas: inventorySummary[0]?.inventoryValuePesewas ?? 0,
+    },
+    expenseBreakdown,
+    recentExpenses,
     paymentBreakdown,
     fulfillmentBreakdown,
     topItems,
@@ -578,6 +736,24 @@ export async function updateKitchenOrderStatus(orderId: number, nextStatus: Orde
   await db.transaction(async (tx) => {
     await tx.update(orders).set({ status: nextStatus, updatedAt: new Date() }).where(eq(orders.id, orderId));
     await tx.insert(orderStatusHistory).values({ orderId, previousStatus: order.status, nextStatus, changedByUserId });
+    if (nextStatus === "preparing") {
+      const usage = await tx.select({
+        orderItemId: orderIngredientUsage.orderItemId, inventoryItemId: orderIngredientUsage.inventoryItemId,
+        quantityMilliunits: orderIngredientUsage.quantityMilliunits, unitCostPesewas: orderIngredientUsage.unitCostPesewas,
+      }).from(orderIngredientUsage).innerJoin(orderItems, eq(orderIngredientUsage.orderItemId, orderItems.id))
+        .where(eq(orderItems.orderId, orderId));
+      for (const item of usage) {
+        const [movement] = await tx.insert(inventoryAdjustments).values({
+          inventoryItemId: item.inventoryItemId, orderItemId: item.orderItemId, reason: "order_usage",
+          quantityDeltaMilliunits: -item.quantityMilliunits, unitCostPesewas: item.unitCostPesewas,
+          note: "Recorded when kitchen preparation started", createdByUserId: changedByUserId,
+        }).onConflictDoNothing().returning({ id: inventoryAdjustments.id });
+        if (movement) await tx.update(inventoryItems).set({
+          currentQuantityMilliunits: sql`${inventoryItems.currentQuantityMilliunits} - ${item.quantityMilliunits}`,
+          updatedAt: new Date(),
+        }).where(eq(inventoryItems.id, item.inventoryItemId));
+      }
+    }
   });
   return { id: orderId, status: nextStatus };
 }

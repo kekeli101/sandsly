@@ -2,9 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 
 const mocks = vi.hoisted(() => ({
+  createExpense: vi.fn(),
+  createInventoryItem: vi.fn(),
   getAdminDashboardData: vi.fn(),
   getManagerConsoleData: vi.fn(),
+  listFinanceManagementData: vi.fn(),
   listRecentOrdersForAdmin: vi.fn(),
+  recordInventoryAdjustment: vi.fn(),
+  replaceProductRecipe: vi.fn(),
 }));
 
 vi.mock("./db", () => mocks);
@@ -45,5 +50,19 @@ describe("owner/manager Admin Console", () => {
 
     await expect(adminRouter.createCaller(contextFor("admin")).console()).resolves.toEqual(snapshot);
     expect(mocks.getManagerConsoleData).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects non-admin financial writes and sends an admin’s inventory record to the server layer", async () => {
+    const inventoryInput = { name: "Tapioca pearls", unit: "g" as const, currentQuantityMilliunits: 10_000, reorderPointMilliunits: 2_000, unitCostPesewas: 35 };
+    await expect(adminRouter.createCaller(contextFor("user")).createInventoryItem(inventoryInput)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    mocks.createInventoryItem.mockResolvedValue({ id: 8, ...inventoryInput });
+
+    await expect(adminRouter.createCaller(contextFor("admin")).createInventoryItem(inventoryInput)).resolves.toMatchObject({ id: 8, name: "Tapioca pearls" });
+    expect(mocks.createInventoryItem).toHaveBeenCalledWith(inventoryInput, 91);
+  });
+
+  it("keeps recipe and operating-expense writes administrator-only", async () => {
+    await expect(adminRouter.createCaller(contextFor("kitchen")).replaceRecipe({ productId: "matcha-cloud-boba", ingredients: [{ inventoryItemId: 8, quantityMilliunits: 25_000 }] })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(adminRouter.createCaller(contextFor("kitchen")).createExpense({ category: "utilities", description: "Electricity", amountPesewas: 45_000, occurredAt: new Date("2026-08-25T12:00:00Z") })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });
