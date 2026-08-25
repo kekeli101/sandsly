@@ -21,4 +21,6 @@ The TypeScript compiler completed successfully. Focused coverage for the Manager
 
 An authenticated administrator session reviewed the local Manager Console at **375 × 812**. The phone-sized view rendered COGS and recorded-waste cards, partial-margin safeguards, inventory value and low-stock readiness, plus the Inventory & Expenses panel with Stock, Recipes, and Expenses controls. The initial state correctly showed empty stock and expense records, and the page did not claim a complete profit margin.
 
+On **2026-08-25**, the same authenticated administrator production review was repeated at a configured **375 × 812** viewport on `https://sandsly.vercel.app/admin`. The deployed page rendered **COGS & recorded waste**, **Inventory & expenses**, **Cost coverage**, **Add inventory**, and **Record adjustment** in the single-column mobile workspace. The live page retained its partial-margin safeguard and empty finance state; no stock item, recipe, adjustment, expense, order, payment, or other operating record was submitted during the review.
+
 No inventory, expenses, stock movements, order costs, orders, payments, reviews, or customer records were fabricated for this release.

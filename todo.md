@@ -152,4 +152,4 @@
 - [x] Add JSDOM interaction tests for Finance Controls tab switching, validation feedback, and empty states.
 - [x] Add a rendered finance workflow test for successful inventory, recipe, or expense mutation wiring and report invalidation.
 - [x] Complete authorization, calculation, and rendered-workflow regression coverage for the financial tracking extension.
-- [ ] Validate the deployed admin workflow at desktop and phone-sized viewports, update documentation, and publish the finance extension.
+- [x] Validate the deployed admin workflow at desktop and phone-sized viewports, update documentation, and publish the finance extension.
