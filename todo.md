@@ -185,3 +185,7 @@
 - [x] Run final checks, record evidence, save a release checkpoint, and deliver the client handoff.
 - [x] Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to render.yaml so reproducible Render deployments support the documented staff image-upload flow.
 - [x] Update the final readiness matrix and developer guide with the Render configuration correction and the intentional Paystack Test Mode deferral.
+- [x] Audit customer and staff screens at phone width for overflow, tap-target, readability, and navigation issues.
+- [x] Improve mobile layouts and interactions without changing ordering, payment, inventory, or role-protection behavior.
+- [x] Add or update mobile regression coverage and verify the key routes visually at phone width.
+- [x] Document and publish the mobile UI improvements.

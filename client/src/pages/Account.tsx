@@ -251,7 +251,7 @@ function AuthScreen({
         <Label label="Password"><PasswordVisibilityInput value={password} onChange={setPassword} autoComplete={authMode === "login" ? "current-password" : "new-password"} describedBy={authMode === "register" ? "password-requirements" : undefined} /></Label>
         {authMode === "register" && <p id="password-requirements" className="mt-2 text-xs leading-5 text-[#a89d96]">Use at least 8 characters.</p>}
         {authMode === "login" && <button type="button" onClick={() => setAuthView("recovery")} className="mt-4 text-left text-xs font-bold text-[#ffb09a] underline decoration-[#ff5a1f]/70 underline-offset-4 hover:text-[#fff7f2]">Forgot your password?</button>}
-        <button type="submit" disabled={pending} className="mt-5 inline-flex h-12 items-center gap-3 rounded-[10px] bg-[#ff5a1f] px-5 text-xs font-black uppercase tracking-[0.16em] text-[#111111] shadow-[4px_4px_0_#000] disabled:opacity-60"><LogIn size={17} /> {pending ? "Working…" : authMode === "register" ? "Create account" : "Sign in"}</button>
+        <button type="submit" disabled={pending} className="mt-5 inline-flex h-12 w-full items-center justify-center gap-3 rounded-[10px] bg-[#ff5a1f] px-5 text-xs font-black uppercase tracking-[0.16em] text-[#111111] shadow-[4px_4px_0_#000] disabled:opacity-60"><LogIn size={17} /> {pending ? "Working…" : authMode === "register" ? "Create account" : "Sign in"}</button>
         <p className="mt-5 text-xs text-[#a89d96]">{staffEntry ? <Link href="/profile" className="font-bold text-[#ffb09a] underline decoration-[#ff5a1f]/70 underline-offset-4">Customer sign-in</Link> : <Link href="/staff" className="font-bold text-[#ffb09a] underline decoration-[#ff5a1f]/70 underline-offset-4">Restaurant staff sign-in</Link>}</p>
       </>}
     </form>
@@ -294,7 +294,7 @@ function Label({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="mt-4 block text-[10px] font-black uppercase tracking-[0.13em] text-[#bdb2ac]">
       {label}
-      <span className="mt-2 block [&_input]:h-11 [&_input]:w-full [&_input]:rounded-[9px] [&_input]:border [&_input]:border-[#4a403c] [&_input]:bg-[#171717] [&_input]:px-3 [&_input]:text-sm [&_input]:font-normal [&_input]:normal-case [&_input]:tracking-normal [&_input]:text-[#fff7f2] [&_textarea]:w-full [&_textarea]:rounded-[9px] [&_textarea]:border [&_textarea]:border-[#4a403c] [&_textarea]:bg-[#171717] [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:text-sm [&_textarea]:font-normal [&_textarea]:normal-case [&_textarea]:tracking-normal [&_textarea]:text-[#fff7f2]">
+      <span className="mt-2 block [&_input]:h-11 [&_input]:w-full [&_input]:rounded-[9px] [&_input]:border [&_input]:border-[#4a403c] [&_input]:bg-[#171717] [&_input]:px-3 [&_input]:text-base sm:[&_input]:text-sm [&_input]:font-normal [&_input]:normal-case [&_input]:tracking-normal [&_input]:text-[#fff7f2] [&_textarea]:w-full [&_textarea]:rounded-[9px] [&_textarea]:border [&_textarea]:border-[#4a403c] [&_textarea]:bg-[#171717] [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:text-base sm:[&_textarea]:text-sm [&_textarea]:font-normal [&_textarea]:normal-case [&_textarea]:tracking-normal [&_textarea]:text-[#fff7f2]">
         {children}
       </span>
     </label>

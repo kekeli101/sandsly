@@ -74,7 +74,7 @@ The checklist’s request to repeat 10–20 full production test orders is inten
 | Missing hashed asset path | HTTP 404 with `text/plain`, not the SPA HTML shell. |
 | Security headers | CSP, `nosniff`, `DENY` framing, restrictive referrer policy, and permissions policy were present. |
 | Paystack dashboard | Reachable but still Test Mode; no change made. |
-| Repository checks | Final previously published QA release passed TypeScript, 38 test files / 99 tests, and production build. The final Render configuration declaration also now includes the documented Supabase storage variables and requires a fresh validation run before its next publication. |
+| Repository checks | The current release candidate passes TypeScript, 39 test files / 102 tests, and the production build. The final Render configuration declaration includes the documented Supabase storage variables. |
 
 ## Recommended client handoff order
 
@@ -83,3 +83,11 @@ First provide the client with the public website URL and the staff/admin URLs. N
 [1]: https://paystack.com/docs/api/authentication/ "Paystack Authentication"
 [2]: https://paystack.com/docs/payments/webhooks/ "Paystack Webhooks"
 [3]: https://paystack.com/docs/payments/verify-payments/ "Paystack Verify Payments"
+
+## Mobile UI release evidence
+
+The final responsive pass targets a 375 × 812 phone viewport without changing ordering, payment, inventory, or role-protection behavior. Account sign-in and registration controls now use full-width phone-friendly actions and 16px form text to avoid mobile browser zoom. Cart fulfillment choices, checkout fields, finance controls, Kitchen status actions, and Manager Console sections stack before the small breakpoint. Menu search and category controls remain readable and horizontally discoverable on narrow screens.
+
+The reviewed phone routes were `/profile`, `/cart`, `/menu`, `/kitchen`, and `/admin`. A 1280 × 720 cross-check of `/`, `/menu`, `/profile`, and `/cart` confirmed that the desktop sidebar, menu grid, account form, and empty-bag composition remain intact. The supporting record is [`verification-mobile-ui.md`](verification-mobile-ui.md), and the regression file is [`server/mobile-responsive.test.ts`](server/mobile-responsive.test.ts).
+
+The remaining mobile handoff item is client acceptance on a real iOS or Android device, including keyboard behavior, touch scrolling, image loading on the client network, and a non-destructive staff walkthrough. This is intentionally separate from real-money Paystack activation.
