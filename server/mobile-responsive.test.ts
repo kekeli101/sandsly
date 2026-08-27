@@ -35,4 +35,12 @@ describe("mobile responsive contracts", () => {
     expect(admin).toContain('<div className="hidden overflow-x-auto sm:block">');
     expect(admin).toContain('<section className="mt-6 min-w-0 rounded-[20px]');
   });
+
+  it("keeps reporting skeletons accessible and motion-reduction friendly", () => {
+    const admin = source("client/src/pages/AdminDashboard.tsx");
+    expect(admin).toContain('role="status" aria-live="polite" aria-label="Loading manager console report"');
+    expect(admin).toContain("motion-reduce:animate-none");
+    expect(admin).toContain('<SkeletonPanel eyebrow="Food performance" title="Top selling dishes">');
+    expect(admin).toContain('<SkeletonPanel eyebrow="Payment ledger" title="Payment method & status">');
+  });
 });

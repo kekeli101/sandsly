@@ -74,7 +74,7 @@ The checklist’s request to repeat 10–20 full production test orders is inten
 | Missing hashed asset path | HTTP 404 with `text/plain`, not the SPA HTML shell. |
 | Security headers | CSP, `nosniff`, `DENY` framing, restrictive referrer policy, and permissions policy were present. |
 | Paystack dashboard | Reachable but still Test Mode; no change made. |
-| Repository checks | The current release candidate passes TypeScript, 39 test files / 103 tests, and the production build. The final Render configuration declaration includes the documented Supabase storage variables. |
+| Repository checks | The current release candidate passes TypeScript, 39 test files / 104 tests, and the production build. The final Render configuration declaration includes the documented Supabase storage variables. |
 
 ## Recommended client handoff order
 
@@ -91,3 +91,9 @@ The final responsive pass targets a 375 × 812 phone viewport without changing o
 The reviewed phone routes were `/profile`, `/cart`, `/menu`, `/kitchen`, and `/admin`. A 1280 × 720 cross-check of `/`, `/menu`, `/profile`, and `/cart` confirmed that the desktop sidebar, menu grid, account form, and empty-bag composition remain intact. The supporting record is [`verification-mobile-ui.md`](verification-mobile-ui.md), and the regression file is [`server/mobile-responsive.test.ts`](server/mobile-responsive.test.ts).
 
 The remaining mobile handoff item is client acceptance on a real iOS or Android device, including keyboard behavior, touch scrolling, image loading on the client network, and a non-destructive staff walkthrough. This is intentionally separate from real-money Paystack activation.
+
+## Manager Console loading-state evidence
+
+Initial Manager Console analytics loading now preserves the dashboard composition with animated skeletons for the revenue trend, follow-up queue, Food Performance, Payment Ledger, and latest orders. The skeletons announce a polite loading status to assistive technology and disable pulsing under reduced-motion preferences. The Payment Ledger skeleton follows the same phone-card/wide-table structure as the loaded state, preventing the loading transition from introducing a layout jump.
+
+The implementation is covered by the responsive regression suite and the final repository validation: TypeScript, 39 test files / 104 tests, and production build all pass. The existing non-destructive constraint remains in place; no reporting, customer, payment, inventory, or expense records were created.

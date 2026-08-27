@@ -21,3 +21,9 @@ The latest local visual review covered `/profile`, `/cart`, `/menu`, `/kitchen`,
 ## Manager Console correction
 
 The Manager Console performance and payment section now uses `min-w-0` grid tracks and constrained content so one panel cannot widen or shift the page. Payment rows render as compact cards on phones and retain the table only from the `sm` breakpoint upward. This prevents the Payment Ledger table’s desktop minimum width from influencing the Food Performance panel or creating horizontal reflow on narrow screens. The layout fix does not change reporting values or payment data.
+
+## Reporting loading states
+
+The Manager Console now renders a stable skeleton report while the initial analytics request is pending. The loading state preserves the approximate layout of the revenue trend, follow-up queue, Food Performance, Payment Ledger, and latest-order panels instead of replacing the dashboard with a generic block. Skeleton bars use a short pulse animation, expose a polite `role="status"` announcement, and disable the animation under `prefers-reduced-motion`. Reporting data and refresh behavior are unchanged.
+
+Focused validation passed with TypeScript and 8 tests across the responsive and finance-rendered suites. The unauthenticated `/admin` route was also reviewed at 375 × 812 to confirm the Manager Console entry state remains composed; the authenticated loading skeleton is covered by source-level regression assertions.
