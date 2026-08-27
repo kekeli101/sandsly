@@ -97,3 +97,7 @@ The remaining mobile handoff item is client acceptance on a real iOS or Android 
 Initial Manager Console analytics loading now preserves the dashboard composition with animated skeletons for the revenue trend, follow-up queue, Food Performance, Payment Ledger, and latest orders. The skeletons announce a polite loading status to assistive technology and disable pulsing under reduced-motion preferences. The Payment Ledger skeleton follows the same phone-card/wide-table structure as the loaded state, preventing the loading transition from introducing a layout jump.
 
 The implementation is covered by the responsive regression suite and the final repository validation: TypeScript, 39 test files / 104 tests, and production build all pass. The existing non-destructive constraint remains in place; no reporting, customer, payment, inventory, or expense records were created.
+
+## Development-order reset record
+
+On 27 August 2026, following explicit user confirmation, the connected project database was reset for development orders only. A transaction deleted all 4 rows from `orders` and all 4 dependent rows from `orderItems`, so Kitchen, Manager Console, and customer Order History now have no order records. The reset preserved 7 users, 7 products, 6 categories, 7 carts, and 0 cart items. No account, menu, cart, inventory, recipe, expense, or payment configuration data was targeted. The connected database currently contains no separate payment or order-status-history tables; therefore no records in those tables were modified.
