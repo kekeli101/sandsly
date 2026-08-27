@@ -74,7 +74,7 @@ The checklist’s request to repeat 10–20 full production test orders is inten
 | Missing hashed asset path | HTTP 404 with `text/plain`, not the SPA HTML shell. |
 | Security headers | CSP, `nosniff`, `DENY` framing, restrictive referrer policy, and permissions policy were present. |
 | Paystack dashboard | Reachable but still Test Mode; no change made. |
-| Repository checks | The current release candidate passes TypeScript, 39 test files / 102 tests, and the production build. The final Render configuration declaration includes the documented Supabase storage variables. |
+| Repository checks | The current release candidate passes TypeScript, 39 test files / 103 tests, and the production build. The final Render configuration declaration includes the documented Supabase storage variables. |
 
 ## Recommended client handoff order
 

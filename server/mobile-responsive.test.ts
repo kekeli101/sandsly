@@ -26,4 +26,13 @@ describe("mobile responsive contracts", () => {
     expect(finance).toContain("grid grid-cols-1 gap-3 sm:grid-cols-3");
     expect(finance).toContain("grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_92px_auto]");
   });
+
+  it("keeps Manager Console performance and payment sections within the viewport", () => {
+    const admin = source("client/src/pages/AdminDashboard.tsx");
+    expect(admin).toContain("overflow-x-hidden bg-[#111]");
+    expect(admin).toContain("grid min-w-0 items-stretch gap-5 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]");
+    expect(admin).toContain('<div className="space-y-2 sm:hidden">');
+    expect(admin).toContain('<div className="hidden overflow-x-auto sm:block">');
+    expect(admin).toContain('<section className="mt-6 min-w-0 rounded-[20px]');
+  });
 });

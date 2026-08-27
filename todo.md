@@ -189,3 +189,4 @@
 - [x] Improve mobile layouts and interactions without changing ordering, payment, inventory, or role-protection behavior.
 - [x] Add or update mobile regression coverage and verify the key routes visually at phone width.
 - [x] Document and publish the mobile UI improvements.
+- [x] Fix Manager Console Enter-key focus and responsive section shifting around Food Performance and Payment Ledger.

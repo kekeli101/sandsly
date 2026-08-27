@@ -17,3 +17,7 @@ This verification is visual and non-destructive. No customer, order, payment, in
 At 1280 × 720, Home, Menu, Profile, and Cart retained their persistent staff/customer sidebar, two-column menu grid, centered account form, and wide empty-bag card. The phone-only stacking rules activate below the small breakpoint and do not compress the desktop composition.
 
 The latest local visual review covered `/profile`, `/cart`, `/menu`, `/kitchen`, and `/admin` at 375 × 812, followed by `/`, `/menu`, `/profile`, and `/cart` at 1280 × 720. No visible horizontal overflow was observed in the reviewed states.
+
+## Manager Console correction
+
+The Manager Console performance and payment section now uses `min-w-0` grid tracks and constrained content so one panel cannot widen or shift the page. Payment rows render as compact cards on phones and retain the table only from the `sm` breakpoint upward. This prevents the Payment Ledger table’s desktop minimum width from influencing the Food Performance panel or creating horizontal reflow on narrow screens. The layout fix does not change reporting values or payment data.
