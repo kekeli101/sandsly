@@ -1,6 +1,6 @@
 # Sandsly
 
-Sandsly is a mobile-first restaurant ordering platform for **The Crunch Bite**, built for Ghanaian customers, kitchen staff, and administrators. The product supports a live catalog, Ghana Cedi pricing, password authentication, persistent carts, pickup and delivery checkout, payment-state records, tracked order timelines, role-protected operations, automatic Kitchen Board polling, operational reporting, and Telegram notifications for new orders.
+**The Crunch Bite** is a mobile-first restaurant ordering platform built for Ghanaian customers, kitchen staff, and administrators. The repository and internal project identifier remain `sandsly`. The product supports a live catalog, Ghana Cedi pricing, password authentication, persistent carts, pickup and delivery checkout, payment-state records, tracked order timelines, role-protected operations, automatic Kitchen Board polling, operational reporting, and Telegram notifications for new orders.
 
 > **Current deployment:** Vercel serves the React storefront, Render serves the Express/tRPC API, and Supabase provides PostgreSQL persistence.
 
@@ -8,7 +8,7 @@ Sandsly is a mobile-first restaurant ordering platform for **The Crunch Bite**, 
 
 | Area | Current behavior |
 | --- | --- |
-| Storefront | Responsive Home, searchable Menu, Cart, Profile, Rewards placeholder, and order-tracking routes |
+| Storefront | Responsive Home, searchable Menu, Cart, Profile, order tracking, and a deliberately hidden Rewards coming-soon route |
 | Catalog | Boba, Yogurt, Ice Cream, Pizza, Fries, and Pork categories with active products, hosted food imagery, and staff device-image uploads |
 | Currency | All prices, delivery fees, totals, and notifications use Ghana cedis (`GH₵`) |
 | Customer accounts | Local email/password registration, accessible show/hide controls, signed HTTP-only sessions, a bounded cross-host API credential stored only for the active browser session, and a non-enumerating recovery request flow |
@@ -333,4 +333,6 @@ The repository contains supporting records for the completed release:
 - [`verification-paystack-webhook.md`](./verification-paystack-webhook.md) records Test Mode webhook dashboard, endpoint-health, and defensive-ingress verification.
 - [`verification-manager-console.md`](./verification-manager-console.md) records protected-route visual review, role coverage, and the finance-reporting boundary.
 - [`verification-manager-finance.md`](./verification-manager-finance.md) records inventory, recipe-cost, operating-expense, profit-readiness, authorization, and mobile control verification.
+- [`DEVELOPER_GUIDE.md`](./DEVELOPER_GUIDE.md) is the beginner-friendly architecture, setup, operations, troubleshooting, and contribution guide.
+- [`FINAL_READINESS.md`](./FINAL_READINESS.md) records the final checklist classification, verified evidence, client-owned approvals, and deferred capabilities.
 - [`todo.md`](./todo.md) preserves the implementation and verification history.

@@ -171,3 +171,17 @@
 - [x] Inspect exact Image Upload Verification Dish and Polling Test Customer dependencies, then delete only the user-approved QA artifacts transactionally from production.
 - [x] Add regression coverage and execute non-destructive desktop/mobile production QA for the remediated findings.
 - [x] Update QA evidence, documentation, and publish the remediation release.
+- [x] Triage the supplied pre-launch checklist and record supported, unsupported, and client-owned launch decisions.
+- [x] Audit deployed customer, Kitchen, Manager Console, data, Telegram, Paystack, security, and hosting readiness without creating customer or payment records.
+- [x] Defer Paystack live-mode activation at the user’s request; retain the verified Test Mode controls and document the future prerequisites.
+- [x] Apply and test any confirmed release-blocker fixes discovered during final QA.
+- [x] Write a detailed beginner-friendly software architecture, setup, contribution, operations, and incident-response guide.
+- [x] Complete final non-destructive production validation, publish the release, and prepare the client handoff record.
+- [x] Classify the supplied pre-launch checklist into verified, unsupported, deferred, and client-owned items without overstating readiness.
+- [x] Document that Paystack remains intentionally in Test Mode and that live payment activation is deferred.
+- [x] Audit and non-destructively verify customer, Kitchen, Manager, hosting, security, Telegram, database, and error-handling flows.
+- [x] Fix any confirmed non-payment P0/P1 issues and add regression coverage.
+- [x] Write beginner-friendly architecture, setup, deployment, roles, operations, troubleshooting, backup, and contribution documentation.
+- [x] Run final checks, record evidence, save a release checkpoint, and deliver the client handoff.
+- [x] Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to render.yaml so reproducible Render deployments support the documented staff image-upload flow.
+- [x] Update the final readiness matrix and developer guide with the Render configuration correction and the intentional Paystack Test Mode deferral.
