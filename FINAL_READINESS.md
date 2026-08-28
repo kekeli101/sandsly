@@ -105,3 +105,9 @@ On 27 August 2026, following explicit user confirmation, the connected project d
 ## Order-number tracking update
 
 New orders now use Ghana-local date-based daily sequences in the format `CB-YYYYMMDD-NNN`, such as `CB-20260828-001`. The sequence restarts at `001` each day in the `Africa/Accra` timezone, existing historical order numbers remain unchanged, and the database uniqueness constraint plus transaction retry protects against rare concurrent collisions. The focused order-number suite passes 4 tests; the full non-external suite passes 39 files and 107 tests, and the production build succeeds. The environment-dependent Paystack credential probe remains separately deferred because its configured Test Mode credential returned HTTP 403 from the sandbox network.
+
+## Manager Console date-filter evidence
+
+The Manager Console now supports a blank all-days view or a specific Ghana-local calendar day selected through the accessible **Specific day** control. The selected day scopes order totals, payment breakdowns, fulfillment status, food performance, COGS, waste, operating expenses, recent orders, and recent expenses; current inventory-on-hand and menu-health values remain global context. The report keeps existing server-side admin protection and shows a lightweight updating status while a selected-day query refreshes.
+
+The date-filter contract is covered by admin-router forwarding and malformed-input tests, the Ghana-local date-range helper tests, and rendered Manager Console coverage for the default state. TypeScript and the focused 10-test validation pass; the production build remains successful. The unauthenticated phone-width route still correctly presents the protected management gate.

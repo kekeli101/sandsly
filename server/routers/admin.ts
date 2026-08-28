@@ -12,6 +12,8 @@ import {
 } from "../db";
 import { adminProcedure, router } from "../_core/trpc";
 
+const managerConsoleInput = z.object({ day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format").optional() }).optional();
+
 const inventoryFields = z.object({
   name: z.string().trim().min(1).max(160),
   unit: z.enum(inventoryUnitValues),
@@ -23,7 +25,7 @@ const inventoryFields = z.object({
 export const adminRouter = router({
   recentOrders: adminProcedure.query(() => listRecentOrdersForAdmin()),
   dashboard: adminProcedure.query(() => getAdminDashboardData()),
-  console: adminProcedure.query(() => getManagerConsoleData()),
+  console: adminProcedure.input(managerConsoleInput).query(({ input }) => getManagerConsoleData(input?.day)),
   financeSetup: adminProcedure.query(() => listFinanceManagementData()),
   createInventoryItem: adminProcedure.input(inventoryFields)
     .mutation(({ ctx, input }) => createInventoryItem(input, ctx.user.id)),

@@ -193,3 +193,4 @@
 - [x] Add smooth, accessible skeleton loading states for Manager Console Food Performance and Payment Ledger sections.
 - [x] Clear confirmed order-only development records while preserving customer/staff accounts, menu, carts, inventory, recipes, expenses, and payment configuration; verify the result.
 - [x] Replace random order numbers with date-based daily sequences in the format `CB-YYYYMMDD-NNN`, preserving existing history and preventing duplicates.
+- [x] Add a Manager Console date filter for specific-day order lookup, with Ghana-local date semantics and responsive controls.

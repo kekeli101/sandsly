@@ -52,6 +52,14 @@ describe("owner/manager Admin Console", () => {
     expect(mocks.getManagerConsoleData).toHaveBeenCalledTimes(1);
   });
 
+  it("forwards a valid selected day and rejects malformed day input", async () => {
+    mocks.getManagerConsoleData.mockResolvedValue({ selectedDay: "2026-08-28" });
+
+    await expect(adminRouter.createCaller(contextFor("admin")).console({ day: "2026-08-28" })).resolves.toEqual({ selectedDay: "2026-08-28" });
+    expect(mocks.getManagerConsoleData).toHaveBeenCalledWith("2026-08-28");
+    await expect(adminRouter.createCaller(contextFor("admin")).console({ day: "2026-08" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
   it("rejects non-admin financial writes and sends an admin’s inventory record to the server layer", async () => {
     const inventoryInput = { name: "Tapioca pearls", unit: "g" as const, currentQuantityMilliunits: 10_000, reorderPointMilliunits: 2_000, unitCostPesewas: 35 };
     await expect(adminRouter.createCaller(contextFor("user")).createInventoryItem(inventoryInput)).rejects.toMatchObject({ code: "FORBIDDEN" });

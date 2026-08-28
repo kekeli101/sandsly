@@ -43,5 +43,7 @@ describe("rendered owner/manager Admin Console", () => {
     expect(screen.getByText("Inventory & expenses")).toBeTruthy();
     expect(screen.getByText("Add inventory")).toBeTruthy();
     expect(screen.getByText("Cost coverage")).toBeTruthy();
+    expect(screen.getByLabelText("Specific day")).toBeTruthy();
+    expect(screen.getByText(/showing all recorded days/i)).toBeTruthy();
   });
 });

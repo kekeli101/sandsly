@@ -36,6 +36,15 @@ describe("mobile responsive contracts", () => {
     expect(admin).toContain('<section className="mt-6 min-w-0 rounded-[20px]');
   });
 
+  it("keeps the Manager Console date filter phone-safe and accessible", () => {
+    const admin = source("client/src/pages/AdminDashboard.tsx");
+    expect(admin).toContain('id="manager-report-day" type="date"');
+    expect(admin).toContain('htmlFor="manager-report-day"');
+    expect(admin).toContain("text-base font-bold");
+    expect(admin).toContain("Showing all recorded days");
+    expect(admin).toContain(">Clear</button>");
+  });
+
   it("keeps reporting skeletons accessible and motion-reduction friendly", () => {
     const admin = source("client/src/pages/AdminDashboard.tsx");
     expect(admin).toContain('role="status" aria-live="polite" aria-label="Loading manager console report"');

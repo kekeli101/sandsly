@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
-import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, or, sql } from "drizzle-orm";
 import postgres from "postgres";
 import {
   cartItems,
@@ -375,6 +375,19 @@ export function getNextDailyOrderSequence(orderNumbers: readonly string[], dateK
   return highest + 1;
 }
 
+export type GhanaDayRange = { day: string; start: Date; end: Date };
+
+export function getGhanaDayRange(day?: string | null): GhanaDayRange | null {
+  if (!day) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error("Manager Console day must use YYYY-MM-DD format");
+  const [year, month, date] = day.split("-").map(Number);
+  const start = new Date(Date.UTC(year, month - 1, date));
+  if (Number.isNaN(start.getTime()) || getGhanaOrderDateKey(start) !== day.replaceAll("-", "")) {
+    throw new Error("Manager Console day is not a valid calendar date");
+  }
+  return { day, start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
+}
+
 function isOrderNumberUniqueViolation(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const record = error as { code?: unknown; constraint?: unknown; message?: unknown };
@@ -607,10 +620,12 @@ export async function saveCustomerAccountDetails(userId: number, input: { displa
   });
 }
 
-export async function listRecentOrdersForAdmin() {
+export async function listRecentOrdersForAdmin(day?: string | null) {
   const db = await requireDb();
+  const dayRange = getGhanaDayRange(day);
+  const dayFilter = dayRange ? and(gte(orders.createdAt, dayRange.start), lt(orders.createdAt, dayRange.end)) : undefined;
   return db.select({ id: orders.id, orderNumber: orders.orderNumber, status: orders.status, orderType: orders.orderType, totalPesewas: orders.totalPesewas, createdAt: orders.createdAt, customerName: users.name, paymentMethod: payments.method, paymentStatus: payments.status })
-    .from(orders).innerJoin(users, eq(orders.userId, users.id)).leftJoin(payments, eq(payments.orderId, orders.id)).orderBy(desc(orders.createdAt)).limit(50);
+    .from(orders).innerJoin(users, eq(orders.userId, users.id)).leftJoin(payments, eq(payments.orderId, orders.id)).where(dayFilter).orderBy(desc(orders.createdAt)).limit(50);
 }
 
 export async function getAdminDashboardData() {
@@ -638,8 +653,12 @@ export async function getAdminDashboardData() {
  * not as automatically settled cash. Online collections are based only on the
  * separately persisted Paystack payment status.
  */
-export async function getManagerConsoleData() {
+export async function getManagerConsoleData(day?: string | null) {
   const db = await requireDb();
+  const dayRange = getGhanaDayRange(day);
+  const orderDayFilter = dayRange ? and(gte(orders.createdAt, dayRange.start), lt(orders.createdAt, dayRange.end)) : undefined;
+  const expenseDayFilter = dayRange ? and(gte(expenses.occurredAt, dayRange.start), lt(expenses.occurredAt, dayRange.end)) : undefined;
+  const inventoryDayFilter = dayRange ? and(gte(inventoryAdjustments.createdAt, dayRange.start), lt(inventoryAdjustments.createdAt, dayRange.end)) : undefined;
   const fulfilledStatuses = ["completed", "delivered"] as const;
   const activeStatuses = ["pending", "accepted", "preparing", "ready", "out_for_delivery"] as const;
   // The free Render instance and direct Supabase connection run with a deliberately
@@ -647,13 +666,13 @@ export async function getManagerConsoleData() {
   // owner report cannot leave queued connections waiting indefinitely.
   const orderSummary = await db.select({
       totalOrders: sql<number>`count(*)::int`,
-      todayOrders: sql<number>`count(*) filter (where ${orders.createdAt} >= date_trunc('day', now()))::int`,
+      todayOrders: dayRange ? sql<number>`count(*)::int` : sql<number>`count(*) filter (where ${orders.createdAt} >= date_trunc('day', now()))::int`,
       activeOrders: sql<number>`count(*) filter (where ${orders.status} in ('pending', 'accepted', 'preparing', 'ready', 'out_for_delivery'))::int`,
       fulfilledOrders: sql<number>`count(*) filter (where ${orders.status} in ('completed', 'delivered'))::int`,
       cancelledOrders: sql<number>`count(*) filter (where ${orders.status} = 'cancelled')::int`,
       fulfilledSalesPesewas: sql<number>`coalesce(sum(${orders.totalPesewas}) filter (where ${orders.status} in ('completed', 'delivered')), 0)::int`,
-      todayFulfilledSalesPesewas: sql<number>`coalesce(sum(${orders.totalPesewas}) filter (where ${orders.status} in ('completed', 'delivered') and ${orders.updatedAt} >= date_trunc('day', now())), 0)::int`,
-    }).from(orders);
+      todayFulfilledSalesPesewas: dayRange ? sql<number>`coalesce(sum(${orders.totalPesewas}) filter (where ${orders.status} in ('completed', 'delivered')), 0)::int` : sql<number>`coalesce(sum(${orders.totalPesewas}) filter (where ${orders.status} in ('completed', 'delivered') and ${orders.updatedAt} >= date_trunc('day', now())), 0)::int`,
+    }).from(orders).where(orderDayFilter);
   const customerSummary = await db.select({ customerCount: sql<number>`count(*)::int` }).from(users).where(eq(users.role, "user"));
   const paymentSummary = await db.select({
       onlineCollectedPesewas: sql<number>`coalesce(sum(${payments.amountPesewas}) filter (where ${payments.status} = 'successful' and ${payments.method} in ('card', 'mobile_money')), 0)::int`,
@@ -663,7 +682,7 @@ export async function getManagerConsoleData() {
       failedOrRefundedOnlineCount: sql<number>`count(*) filter (where ${payments.status} in ('failed', 'refunded') and ${payments.method} in ('card', 'mobile_money'))::int`,
       cashFulfilledToReconcilePesewas: sql<number>`coalesce(sum(${payments.amountPesewas}) filter (where ${payments.method} in ('cash_on_pickup', 'cash_on_delivery') and ${orders.status} in ('completed', 'delivered')), 0)::int`,
       cashFulfilledToReconcileCount: sql<number>`count(*) filter (where ${payments.method} in ('cash_on_pickup', 'cash_on_delivery') and ${orders.status} in ('completed', 'delivered'))::int`,
-    }).from(payments).innerJoin(orders, eq(payments.orderId, orders.id));
+    }).from(payments).innerJoin(orders, eq(payments.orderId, orders.id)).where(orderDayFilter);
   const menuSummary = await db.select({
       activeProducts: sql<number>`count(*) filter (where ${products.isActive} = true)::int`,
       inactiveProducts: sql<number>`count(*) filter (where ${products.isActive} = false)::int`,
@@ -671,18 +690,18 @@ export async function getManagerConsoleData() {
   const costCoverage = await db.select({
       costedMenuRevenuePesewas: sql<number>`coalesce(sum(${orderItems.lineTotalPesewas}) filter (where ${orderItems.isCosted} = true), 0)::int`,
       uncostedMenuRevenuePesewas: sql<number>`coalesce(sum(${orderItems.lineTotalPesewas}) filter (where ${orderItems.isCosted} = false), 0)::int`,
-    }).from(orderItems).innerJoin(orders, eq(orderItems.orderId, orders.id)).where(inArray(orders.status, fulfilledStatuses));
+    }).from(orderItems).innerJoin(orders, eq(orderItems.orderId, orders.id)).where(and(inArray(orders.status, fulfilledStatuses), orderDayFilter));
   const cogsSummary = await db.select({
       cogsPesewas: sql<number>`coalesce(sum(${orderIngredientUsage.totalCostPesewas}), 0)::int`,
     }).from(orderIngredientUsage).innerJoin(orderItems, eq(orderIngredientUsage.orderItemId, orderItems.id))
-      .innerJoin(orders, eq(orderItems.orderId, orders.id)).where(inArray(orders.status, fulfilledStatuses));
-  const expenseSummary = await db.select({ totalExpensePesewas: sql<number>`coalesce(sum(${expenses.amountPesewas}), 0)::int` }).from(expenses);
+      .innerJoin(orders, eq(orderItems.orderId, orders.id)).where(and(inArray(orders.status, fulfilledStatuses), orderDayFilter));
+  const expenseSummary = await db.select({ totalExpensePesewas: sql<number>`coalesce(sum(${expenses.amountPesewas}), 0)::int` }).from(expenses).where(expenseDayFilter);
   const wasteSummary = await db.select({
       inventoryWastePesewas: sql<number>`coalesce(sum(round(-${inventoryAdjustments.quantityDeltaMilliunits} * ${inventoryAdjustments.unitCostPesewas} / 1000.0)), 0)::int`,
-    }).from(inventoryAdjustments).where(and(eq(inventoryAdjustments.reason, "waste"), sql`${inventoryAdjustments.quantityDeltaMilliunits} < 0`));
+    }).from(inventoryAdjustments).where(and(eq(inventoryAdjustments.reason, "waste"), sql`${inventoryAdjustments.quantityDeltaMilliunits} < 0`, inventoryDayFilter));
   const expenseBreakdown = await db.select({
       category: expenses.category, amountPesewas: sql<number>`coalesce(sum(${expenses.amountPesewas}), 0)::int`,
-    }).from(expenses).groupBy(expenses.category).orderBy(desc(sql`sum(${expenses.amountPesewas})`));
+    }).from(expenses).where(expenseDayFilter).groupBy(expenses.category).orderBy(desc(sql`sum(${expenses.amountPesewas})`));
   const inventorySummary = await db.select({
       lowStockCount: sql<number>`count(*) filter (where ${inventoryItems.isActive} = true and ${inventoryItems.reorderPointMilliunits} > 0 and ${inventoryItems.currentQuantityMilliunits} <= ${inventoryItems.reorderPointMilliunits})::int`,
       inventoryValuePesewas: sql<number>`coalesce(sum(round(${inventoryItems.currentQuantityMilliunits} * ${inventoryItems.unitCostPesewas} / 1000.0)), 0)::int`,
@@ -692,29 +711,31 @@ export async function getManagerConsoleData() {
       status: payments.status,
       orderCount: sql<number>`count(*)::int`,
       amountPesewas: sql<number>`coalesce(sum(${payments.amountPesewas}), 0)::int`,
-    }).from(payments).groupBy(payments.method, payments.status);
+    }).from(payments).innerJoin(orders, eq(payments.orderId, orders.id)).where(orderDayFilter).groupBy(payments.method, payments.status);
   const fulfillmentBreakdown = await db.select({
       status: orders.status,
       orderCount: sql<number>`count(*)::int`,
       totalPesewas: sql<number>`coalesce(sum(${orders.totalPesewas}), 0)::int`,
-    }).from(orders).groupBy(orders.status);
+    }).from(orders).where(orderDayFilter).groupBy(orders.status);
   const topItems = await db.select({
       name: orderItems.productName,
       quantity: sql<number>`coalesce(sum(${orderItems.quantity}), 0)::int`,
       revenuePesewas: sql<number>`coalesce(sum(${orderItems.lineTotalPesewas}), 0)::int`,
       orderCount: sql<number>`count(distinct ${orderItems.orderId})::int`,
     }).from(orderItems).innerJoin(orders, eq(orderItems.orderId, orders.id))
-      .where(inArray(orders.status, fulfilledStatuses)).groupBy(orderItems.productName)
+      .where(and(inArray(orders.status, fulfilledStatuses), orderDayFilter)).groupBy(orderItems.productName)
       .orderBy(desc(sql`sum(${orderItems.lineTotalPesewas})`)).limit(8);
   const dailySales = await db.select({
       day: sql<string>`to_char(date_trunc('day', ${orders.updatedAt}), 'Mon DD')`,
       orderCount: sql<number>`count(*)::int`,
       revenuePesewas: sql<number>`coalesce(sum(${orders.totalPesewas}), 0)::int`,
-    }).from(orders).where(and(inArray(orders.status, fulfilledStatuses), sql`${orders.updatedAt} >= now() - interval '6 days'`))
+    }).from(orders).where(dayRange
+      ? and(inArray(orders.status, fulfilledStatuses), orderDayFilter)
+      : and(inArray(orders.status, fulfilledStatuses), sql`${orders.updatedAt} >= now() - interval '6 days'`))
       .groupBy(sql`date_trunc('day', ${orders.updatedAt})`).orderBy(sql`date_trunc('day', ${orders.updatedAt})`);
-  const recentOrders = await listRecentOrdersForAdmin();
+  const recentOrders = await listRecentOrdersForAdmin(day);
   const recentExpenses = await db.select({ id: expenses.id, category: expenses.category, description: expenses.description, amountPesewas: expenses.amountPesewas, occurredAt: expenses.occurredAt })
-    .from(expenses).orderBy(desc(expenses.occurredAt), desc(expenses.id)).limit(5);
+    .from(expenses).where(expenseDayFilter).orderBy(desc(expenses.occurredAt), desc(expenses.id)).limit(5);
   const coveredMenuRevenue = costCoverage[0]?.costedMenuRevenuePesewas ?? 0;
   const uncostedMenuRevenue = costCoverage[0]?.uncostedMenuRevenuePesewas ?? 0;
   const fulfilledSales = orderSummary[0]?.fulfilledSalesPesewas ?? 0;

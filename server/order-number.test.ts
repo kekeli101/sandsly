@@ -1,9 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { formatDailyOrderNumber, getGhanaOrderDateKey, getNextDailyOrderSequence } from "./db";
+import { formatDailyOrderNumber, getGhanaDayRange, getGhanaOrderDateKey, getNextDailyOrderSequence } from "./db";
 
 describe("daily order numbers", () => {
   it("uses the Ghana calendar date for the date key", () => {
     expect(getGhanaOrderDateKey(new Date("2026-08-28T00:30:00.000Z"))).toBe("20260828");
+  });
+
+  it("builds an inclusive Ghana-local day range with an exclusive next-day boundary", () => {
+    const range = getGhanaDayRange("2026-08-28");
+    expect(range?.start.toISOString()).toBe("2026-08-28T00:00:00.000Z");
+    expect(range?.end.toISOString()).toBe("2026-08-29T00:00:00.000Z");
+  });
+
+  it("rejects malformed and impossible calendar dates", () => {
+    expect(() => getGhanaDayRange("2026-08")).toThrow(/YYYY-MM-DD/);
+    expect(() => getGhanaDayRange("2026-02-30")).toThrow(/valid calendar date/);
   });
 
   it("formats a padded daily sequence with the Crunch Bite prefix", () => {
