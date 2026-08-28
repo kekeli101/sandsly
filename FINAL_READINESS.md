@@ -101,3 +101,7 @@ The implementation is covered by the responsive regression suite and the final r
 ## Development-order reset record
 
 On 27 August 2026, following explicit user confirmation, the connected project database was reset for development orders only. A transaction deleted all 4 rows from `orders` and all 4 dependent rows from `orderItems`, so Kitchen, Manager Console, and customer Order History now have no order records. The reset preserved 7 users, 7 products, 6 categories, 7 carts, and 0 cart items. No account, menu, cart, inventory, recipe, expense, or payment configuration data was targeted. The connected database currently contains no separate payment or order-status-history tables; therefore no records in those tables were modified.
+
+## Order-number tracking update
+
+New orders now use Ghana-local date-based daily sequences in the format `CB-YYYYMMDD-NNN`, such as `CB-20260828-001`. The sequence restarts at `001` each day in the `Africa/Accra` timezone, existing historical order numbers remain unchanged, and the database uniqueness constraint plus transaction retry protects against rare concurrent collisions. The focused order-number suite passes 4 tests; the full non-external suite passes 39 files and 107 tests, and the production build succeeds. The environment-dependent Paystack credential probe remains separately deferred because its configured Test Mode credential returned HTTP 403 from the sandbox network.

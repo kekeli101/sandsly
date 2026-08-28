@@ -138,6 +138,8 @@ Cart actions are optimistic: the interface updates immediately, then the mutatio
 
 Checkout validates customer details and delivery fields on the server. The server calculates the order total from stored product prices and integer fees; never trust a browser-submitted total. The UI prevents duplicate submission and provides a recovery path when a request fails.
 
+New orders receive a predictable Ghana-local daily sequence in the format `CB-YYYYMMDD-NNN`, for example `CB-20260828-001`. The date is calculated in `Africa/Accra`, and the sequence starts at `001` for each calendar day. Existing order numbers are preserved for history compatibility. The database uniqueness constraint remains authoritative, and checkout retries a rare order-number collision inside the transaction rather than returning a duplicate.
+
 Cash orders may notify Telegram after the order is stored. Online Card/Mobile Money orders remain pending until Paystack independently verifies the exact reference, GHS currency, amount, and successful status. Do not loosen this rule for faster UI feedback.
 
 ## 10. Kitchen operations

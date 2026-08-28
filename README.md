@@ -13,6 +13,7 @@
 | Currency | All prices, delivery fees, totals, and notifications use Ghana cedis (`GH₵`) |
 | Customer accounts | Local email/password registration, accessible show/hide controls, signed HTTP-only sessions, a bounded cross-host API credential stored only for the active browser session, and a non-enumerating recovery request flow |
 | Cart and checkout | Database-backed cart, quantity changes, pickup/delivery selection, delivery validation, notes, payment-method selection, Paystack test checkout, and payment-state records |
+| Order tracking | New orders use Ghana-local daily sequences such as `CB-20260828-001`; existing order numbers remain unchanged and uniqueness is enforced server-side |
 | Customer tracking | Live-refreshing Profile order cards with item details, payment state, fulfillment type, and a status timeline |
 | Kitchen Board | Kitchen/Admin-only access with Active and Finished tabs, pickup/delivery-aware status transitions, payment context, delivery details, and five-second polling |
 | Admin dashboard | Admin-only `/admin` reporting for order totals, active/finished counts, completed sales, customer count, popular dishes, and recent orders |

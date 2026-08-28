@@ -342,10 +342,54 @@ export type CheckoutInput = {
   deliveryInstructions?: string;
 };
 
+const ORDER_NUMBER_PREFIX = "CB";
+const ORDER_NUMBER_TIME_ZONE = "Africa/Accra";
+const MAX_ORDER_NUMBER_RETRIES = 4;
+const DAILY_ORDER_NUMBER_PATTERN = new RegExp(`^${ORDER_NUMBER_PREFIX}-(\\d{8})-(\\d+)$`);
+
+export function getGhanaOrderDateKey(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: ORDER_NUMBER_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}${values.month}${values.day}`;
+}
+
+export function formatDailyOrderNumber(dateKey: string, sequence: number): string {
+  if (!/^\d{8}$/.test(dateKey)) throw new Error("Order date key must use YYYYMMDD format");
+  if (!Number.isInteger(sequence) || sequence < 1) throw new Error("Order sequence must be a positive integer");
+  return `${ORDER_NUMBER_PREFIX}-${dateKey}-${String(sequence).padStart(3, "0")}`;
+}
+
+export function getNextDailyOrderSequence(orderNumbers: readonly string[], dateKey: string): number {
+  let highest = 0;
+  for (const orderNumber of orderNumbers) {
+    const match = DAILY_ORDER_NUMBER_PATTERN.exec(orderNumber);
+    if (match?.[1] !== dateKey) continue;
+    const sequence = Number(match[2]);
+    if (Number.isSafeInteger(sequence)) highest = Math.max(highest, sequence);
+  }
+  return highest + 1;
+}
+
+function isOrderNumberUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const record = error as { code?: unknown; constraint?: unknown; message?: unknown };
+  const code = String(record.code ?? "");
+  const details = `${String(record.constraint ?? "")} ${String(record.message ?? "")}`.toLowerCase();
+  return (code === "23505" || code === "1062") && (details.includes("ordernumber") || details.includes("order_number"));
+}
+
 export async function createOrderFromCart(userId: number, input: CheckoutInput) {
   const db = await requireDb();
   const cart = await getOrCreateCart(userId);
-  return db.transaction(async (tx) => {
+  let lastCollision: unknown;
+  for (let attempt = 0; attempt < MAX_ORDER_NUMBER_RETRIES; attempt += 1) {
+    try {
+      return await db.transaction(async (tx) => {
     const lines = await tx.select({
       id: products.id, name: products.name, pricePesewas: products.pricePesewas, quantity: cartItems.quantity,
     }).from(cartItems).innerJoin(products, eq(cartItems.productId, products.id)).where(and(eq(cartItems.cartId, cart.id), eq(products.isActive, true)));
@@ -361,7 +405,10 @@ export async function createOrderFromCart(userId: number, input: CheckoutInput) 
     }
     const deliveryFee = input.orderType === "delivery" ? DELIVERY_FEE_PESEWAS : 0;
     const totals = calculateOrderTotals(lines.map((line) => ({ unitPricePesewas: line.pricePesewas, quantity: line.quantity })), deliveryFee);
-    const orderNumber = `CB-${Date.now().toString().slice(-8)}-${Math.floor(100 + Math.random() * 900)}`;
+    const dateKey = getGhanaOrderDateKey(new Date());
+    const existingOrderNumbers = await tx.select({ orderNumber: orders.orderNumber }).from(orders)
+      .where(sql`${orders.orderNumber} LIKE ${`${ORDER_NUMBER_PREFIX}-${dateKey}-%`}`);
+    const orderNumber = formatDailyOrderNumber(dateKey, getNextDailyOrderSequence(existingOrderNumbers.map((row) => row.orderNumber), dateKey));
     const [created] = await tx.insert(orders).values({
       orderNumber, userId, status: "pending", orderType: input.orderType, currency: "GHS", ...totals,
       customerNote: input.customerNote?.trim() || null,
@@ -412,7 +459,13 @@ export async function createOrderFromCart(userId: number, input: CheckoutInput) 
       deliveryAddress: input.orderType === "delivery" ? input.deliveryAddress?.trim() || undefined : undefined,
       deliveryInstructions: input.orderType === "delivery" ? input.deliveryInstructions?.trim() || undefined : undefined,
     };
-  });
+      });
+    } catch (error) {
+      if (!isOrderNumberUniqueViolation(error) || attempt === MAX_ORDER_NUMBER_RETRIES - 1) throw error;
+      lastCollision = error;
+    }
+  }
+  throw lastCollision ?? new Error("Unable to allocate an order number");
 }
 
 export async function attachPaystackReference(orderId: number, reference: string) {
